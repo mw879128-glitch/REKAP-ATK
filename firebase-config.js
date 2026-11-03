@@ -1,26 +1,26 @@
-/*
- * ================================================================
- *  KONFIGURASI DATABASE ONLINE - Stock ATK DC (Firebase Firestore)
- * ================================================================
- *  Isi nilai di bawah dengan konfigurasi dari Firebase Console:
- *    Project settings  ->  General  ->  Your apps  ->  Web app  ->  SDK setup and configuration (Config)
- *
- *  Selama apiKey masih "ISI_...", aplikasi berjalan dalam MODE LOKAL
- *  (data hanya tersimpan di browser perangkat itu saja).
- *
- *  Catatan: nilai config Firebase Web memang bersifat publik (aman ditaruh di GitHub).
- *  Keamanan data diatur oleh file firestore.rules.
- *  Panduan lengkap: lihat README.md
- */
-window.FIREBASE_CONFIG = {
-    apiKey: "ISI_API_KEY_ANDA",
-    authDomain: "NAMA-PROJECT.firebaseapp.com",
-    projectId: "NAMA-PROJECT",
-    storageBucket: "NAMA-PROJECT.appspot.com",
-    messagingSenderId: "000000000000",
-    appId: "1:000000000000:web:xxxxxxxxxxxxxxxx"
-};
+rules_version = '2';
 
-// Nama ruang data aplikasi di database (jangan diubah setelah dipakai, agar data lama tetap terbaca)
-window.FIREBASE_APP_ID = "rekap-atk-dc";
+service cloud.firestore {
+  match /databases/{database}/documents {
 
+    // Daftar user login aplikasi
+    match /artifacts/{appId}/public/data/users/{username} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.resource.data.username is string
+        && request.resource.data.pass is string;
+      allow delete: if request.auth != null && username != 'admin';
+    }
+
+    // Data inputan per user
+    match /artifacts/{appId}/users/{username}/{colName}/{docId} {
+      allow read, write: if request.auth != null
+        && colName in ['master', 'bagian', 'in', 'out', 'so'];
+    }
+
+    // Selain itu ditolak
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
