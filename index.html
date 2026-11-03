@@ -48,10 +48,13 @@
                         <input type="password" id="login-pass" required placeholder="Masukkan password" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
                     </div>
                 </div>
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2 mt-2">
+                <button type="submit" id="btn-login" class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-wait text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2 mt-2">
                     <i class="fa-solid fa-right-to-bracket"></i> Masuk Sistem
                 </button>
             </form>
+            <p id="login-sync-status" class="mt-5 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-circle-notch fa-spin"></i> Menghubungkan ke database...
+            </p>
         </div>
     </div>
 
@@ -97,6 +100,7 @@
                         </button>
                     </nav>
                     <div class="flex items-center gap-2">
+                        <span id="sync-status" class="text-xs bg-indigo-700/80 px-3 py-2 rounded-xl text-indigo-100 font-medium" title="Status database"></span>
                         <span id="current-user-badge" class="text-xs bg-indigo-700/80 px-3 py-2 rounded-xl text-indigo-100 font-medium"></span>
                         <button onclick="handleLogout()" class="bg-rose-500 hover:bg-rose-600 text-white px-3.5 py-2 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center gap-1.5" title="Keluar">
                             <i class="fa-solid fa-right-from-bracket"></i> Logout
@@ -547,18 +551,43 @@
         </footer>
     </div>
 
+    <!-- Konfigurasi Database (Firebase Firestore) - edit file firebase-config.js -->
+    <script src="firebase-config.js"></script>
+
     <!-- Firebase & Application Script -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import {
+            initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager,
+            doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'rekap-stok-app-default';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        // ================= KONFIGURASI DATABASE =================
+        // Prioritas: firebase-config.js (window.FIREBASE_CONFIG) -> environment Canvas (__firebase_config)
+        function resolveFirebaseConfig() {
+            const fileCfg = window.FIREBASE_CONFIG;
+            if (fileCfg && fileCfg.apiKey && !String(fileCfg.apiKey).startsWith('ISI_')) return fileCfg;
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                try { return JSON.parse(__firebase_config); } catch (e) { /* abaikan */ }
+            }
+            return null;
+        }
+
+        const firebaseConfig = resolveFirebaseConfig();
+        const appId = window.FIREBASE_APP_ID || (typeof __app_id !== 'undefined' ? __app_id : 'rekap-stok-app-default');
+        const USER_COLLECTIONS = ['master', 'bagian', 'in', 'out', 'so'];
+        const DEFAULT_ADMIN = { username: 'admin', pass: 'admin123' };
+        const SESSION_KEY = 'app_session_user';
 
         let app, dbAuth, firestoreDb;
         let currentUser = null;
         let currentLoggedUsername = null;
+        let cloudMode = false;          // true = data tersimpan di database online (Firestore)
+        let usersLoaded = false;        // daftar user sudah dimuat dari database
+        let usersUnsub = null;
+        let userDataUnsubs = [];        // listener realtime milik user yang sedang login
+        const pendingByCol = {};
 
         window.db = {
             master: [],
@@ -566,134 +595,266 @@
             in: [],
             out: [],
             so: [],
-            users: [{ username: 'admin', pass: 'admin123' }]
+            users: [{ ...DEFAULT_ADMIN }]
         };
 
-        async function initFirebase() {
-            try {
-                if (Object.keys(firebaseConfig).length > 0) {
-                    app = initializeApp(firebaseConfig);
-                    firestoreDb = getFirestore(app);
-                    dbAuth = getAuth(app);
-
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(dbAuth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(dbAuth);
-                    }
-
-                    onAuthStateChanged(dbAuth, (user) => {
-                        if (user) {
-                            currentUser = user;
-                            initUsersRealtimeSync();
-                        }
-                    });
-                } else {
-                    loadFromLocalStorage();
-                }
-            } catch (e) {
-                console.error("Firebase init error, fallback to localStorage:", e);
-                loadFromLocalStorage();
+        // ================= STATUS SINKRONISASI =================
+        function setLoginStatus(html, cls = 'text-slate-500') {
+            const el = document.getElementById('login-sync-status');
+            if (el) {
+                el.className = `mt-5 text-center text-xs flex items-center justify-center gap-2 ${cls}`;
+                el.innerHTML = html;
             }
         }
 
+        function setLoginEnabled(enabled) {
+            const btn = document.getElementById('btn-login');
+            if (btn) btn.disabled = !enabled;
+        }
+
+        function updateSyncBadge() {
+            const el = document.getElementById('sync-status');
+            if (!el) return;
+            if (!cloudMode) {
+                el.innerHTML = '<i class="fa-solid fa-hard-drive mr-1"></i> Lokal';
+                el.title = 'Database online belum dikonfigurasi. Data hanya tersimpan di perangkat ini.';
+                return;
+            }
+            const pending = Object.values(pendingByCol).some(Boolean);
+            if (!navigator.onLine) {
+                el.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1 text-amber-300"></i> Offline';
+                el.title = 'Tidak ada internet. Data disimpan sementara dan akan otomatis terkirim saat online.';
+            } else if (pending) {
+                el.innerHTML = '<i class="fa-solid fa-rotate fa-spin mr-1"></i> Menyimpan...';
+                el.title = 'Mengirim data ke database online...';
+            } else {
+                el.innerHTML = '<i class="fa-solid fa-cloud mr-1 text-emerald-300"></i> Tersinkron';
+                el.title = 'Semua data sudah tersimpan di database online.';
+            }
+        }
+        window.addEventListener('online', updateSyncBadge);
+        window.addEventListener('offline', updateSyncBadge);
+
+        // ================= INISIALISASI =================
+        async function initFirebase() {
+            if (!firebaseConfig) {
+                startLocalMode('Database online belum dikonfigurasi (isi file firebase-config.js). Data hanya tersimpan di perangkat ini.');
+                return;
+            }
+            try {
+                app = initializeApp(firebaseConfig);
+                try {
+                    // Cache offline: data tetap tersimpan walau koneksi putus, lalu otomatis dikirim saat online
+                    firestoreDb = initializeFirestore(app, {
+                        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+                    });
+                } catch (e) {
+                    console.warn('Persistent cache tidak tersedia, memakai mode memori:', e);
+                    firestoreDb = getFirestore(app);
+                }
+                dbAuth = getAuth(app);
+
+                onAuthStateChanged(dbAuth, (user) => {
+                    if (user && !currentUser) {
+                        currentUser = user;
+                        cloudMode = true;
+                        initUsersRealtimeSync();
+                    }
+                });
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(dbAuth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(dbAuth);
+                }
+            } catch (e) {
+                console.error("Firebase init error, fallback to localStorage:", e);
+                startLocalMode('Gagal terhubung ke database online (' + (e.code || e.message) + '). Sementara memakai data lokal perangkat ini.');
+            }
+        }
+
+        function startLocalMode(message) {
+            cloudMode = false;
+            loadFromLocalStorage();
+            usersLoaded = true;
+            setLoginEnabled(true);
+            setLoginStatus(`<i class="fa-solid fa-triangle-exclamation"></i> ${message}`, 'text-amber-600');
+            updateSyncBadge();
+            tryRestoreSession();
+        }
+
         function loadFromLocalStorage() {
-            window.db.users = JSON.parse(localStorage.getItem('app_users')) || [{ username: 'admin', pass: 'admin123' }];
+            window.db.users = JSON.parse(localStorage.getItem('app_users')) || [{ ...DEFAULT_ADMIN }];
             if (currentLoggedUsername) {
                 loadUserLocalData(currentLoggedUsername);
             }
         }
 
         function loadUserLocalData(username) {
-            const collections = ['master', 'bagian', 'in', 'out', 'so'];
-            collections.forEach(colName => {
+            USER_COLLECTIONS.forEach(colName => {
                 const storageKey = `app_${username}_${colName}`;
                 window.db[colName] = JSON.parse(localStorage.getItem(storageKey)) || [];
             });
         }
 
+        // Daftar user login disimpan di database pusat, sehingga user yang ditambahkan
+        // bisa login dari perangkat mana pun.
         function initUsersRealtimeSync() {
             if (!currentUser || !firestoreDb) return;
-            
+            if (usersUnsub) usersUnsub();
+
             const usersRef = collection(firestoreDb, 'artifacts', appId, 'public', 'data', 'users');
-            onSnapshot(usersRef, (snapshot) => {
+            usersUnsub = onSnapshot(usersRef, { includeMetadataChanges: true }, (snapshot) => {
                 let items = [];
                 snapshot.forEach(docSnap => {
                     items.push({ id: docSnap.id, ...docSnap.data() });
                 });
+
+                const fromServer = !snapshot.metadata.fromCache;
                 if (items.length === 0) {
-                    saveCloudData('users', 'admin', { username: 'admin', pass: 'admin123' });
-                    window.db.users = [{ username: 'admin', pass: 'admin123' }];
+                    if (fromServer) {
+                        // Database baru: buat admin default + pindahkan user lama dari perangkat ini (jika ada)
+                        const localUsers = JSON.parse(localStorage.getItem('app_users')) || [];
+                        const seed = [{ ...DEFAULT_ADMIN }, ...localUsers.filter(u => u.username && u.username !== 'admin')];
+                        window.db.users = seed;
+                        seed.forEach(u => saveCloudData('users', u.username, { username: u.username, pass: u.pass }));
+                    } else {
+                        window.db.users = [{ ...DEFAULT_ADMIN }];
+                    }
                 } else {
                     window.db.users = items;
                 }
+
+                if (fromServer || items.length > 0) {
+                    if (!usersLoaded || fromServer) {
+                        usersLoaded = true;
+                        setLoginEnabled(true);
+                        tryRestoreSession();
+                        setLoginStatus('<i class="fa-solid fa-cloud text-emerald-500"></i> Terhubung ke database online. Data tersinkron di semua perangkat.', 'text-emerald-600');
+                    }
+                }
+
+                // User yang sedang login dihapus dari perangkat lain -> keluar otomatis
+                if (usersLoaded && fromServer && currentLoggedUsername && currentLoggedUsername !== 'admin'
+                    && !window.db.users.some(u => u.username === currentLoggedUsername)) {
+                    handleLogout();
+                    window.showAlert('Akun Anda telah dihapus oleh admin.', 'error');
+                }
                 renderUsers();
+            }, (error) => {
+                console.error('Error syncing users:', error);
+                startLocalMode('Akses database ditolak (' + error.code + '). Periksa Firestore Rules & Anonymous Auth. Sementara memakai data lokal.');
             });
         }
 
+        function stopUserCollectionsSync() {
+            userDataUnsubs.forEach(unsub => { try { unsub(); } catch (e) {} });
+            userDataUnsubs = [];
+            USER_COLLECTIONS.forEach(c => { pendingByCol[c] = false; });
+        }
+
+        // Data inputan setiap user disimpan terpisah: artifacts/{appId}/users/{username}/{koleksi}
         function syncUserCollections(username) {
             if (!firestoreDb || !currentUser) return;
-            const collections = ['master', 'bagian', 'in', 'out', 'so'];
-            
-            collections.forEach(colName => {
+            stopUserCollectionsSync();
+
+            USER_COLLECTIONS.forEach(colName => {
                 const colRef = collection(firestoreDb, 'artifacts', appId, 'users', username, colName);
-                onSnapshot(colRef, (snapshot) => {
+                const unsub = onSnapshot(colRef, { includeMetadataChanges: true }, (snapshot) => {
+                    if (username !== currentLoggedUsername) return;
                     let items = [];
                     snapshot.forEach(docSnap => {
                         items.push({ id: docSnap.id, ...docSnap.data() });
                     });
+
+                    // Migrasi satu kali: data lama yang hanya tersimpan di perangkat ini diunggah ke database
+                    const migratedKey = `app_${username}_${colName}_migrated`;
+                    if (!snapshot.metadata.fromCache && !localStorage.getItem(migratedKey)) {
+                        localStorage.setItem(migratedKey, '1');
+                        const localItems = JSON.parse(localStorage.getItem(`app_${username}_${colName}`)) || [];
+                        const existingIds = new Set(items.map(i => String(i.id)));
+                        const toUpload = localItems.filter(i => !existingIds.has(String(colName === 'master' ? i.plu : i.id)));
+                        if (toUpload.length > 0) {
+                            uploadLocalItems(username, colName, toUpload);
+                        }
+                    }
+
                     window.db[colName] = items;
                     localStorage.setItem(`app_${username}_${colName}`, JSON.stringify(items));
+                    pendingByCol[colName] = snapshot.metadata.hasPendingWrites;
+                    updateSyncBadge();
                     refreshCurrentView();
                 }, (error) => {
                     console.error(`Error syncing ${colName} for user ${username}:`, error);
+                    window.showAlert(`Gagal sinkron data ${colName}: ${error.code}`, 'error');
                 });
+                userDataUnsubs.push(unsub);
             });
         }
 
-        window.saveCloudData = async function(colName, docId, data) {
-            if (firestoreDb && currentUser && currentLoggedUsername && colName !== 'users') {
-                try {
-                    const docRef = doc(firestoreDb, 'artifacts', appId, 'users', currentLoggedUsername, colName, String(docId));
-                    await setDoc(docRef, data, { merge: true });
-                } catch (e) {
-                    console.error("Cloud save error:", e);
+        async function uploadLocalItems(username, colName, items) {
+            try {
+                for (let i = 0; i < items.length; i += 400) {
+                    const batch = writeBatch(firestoreDb);
+                    items.slice(i, i + 400).forEach(item => {
+                        const docId = colName === 'master' ? item.plu : item.id;
+                        if (!docId) return;
+                        const { id, ...data } = item;
+                        const payload = colName === 'master' ? data : { id: String(docId), ...data };
+                        batch.set(doc(firestoreDb, 'artifacts', appId, 'users', username, colName, String(docId)), payload, { merge: true });
+                    });
+                    await batch.commit();
                 }
-            } else if (colName === 'users' && firestoreDb && currentUser) {
-                try {
-                    const docRef = doc(firestoreDb, 'artifacts', appId, 'public', 'data', 'users', String(docId));
-                    await setDoc(docRef, data, { merge: true });
-                } catch (e) {
-                    console.error("Cloud user save error:", e);
-                }
+                console.log(`Migrasi ${items.length} data ${colName} ke database online selesai.`);
+            } catch (e) {
+                console.error('Migrasi data lokal gagal:', e);
+                localStorage.removeItem(`app_${username}_${colName}_migrated`);
             }
+        }
+
+        function stripUndefined(obj) {
+            const out = {};
+            Object.keys(obj).forEach(k => { if (obj[k] !== undefined) out[k] = obj[k]; });
+            return out;
+        }
+
+        window.saveCloudData = async function(colName, docId, data) {
+            // Salinan lokal (cadangan) selalu disimpan
             if (colName !== 'users' && currentLoggedUsername) {
                 localStorage.setItem(`app_${currentLoggedUsername}_${colName}`, JSON.stringify(window.db[colName]));
             } else if (colName === 'users') {
                 localStorage.setItem('app_users', JSON.stringify(window.db.users));
+            }
+            if (!cloudMode || !firestoreDb || !currentUser) return;
+
+            try {
+                const docRef = colName === 'users'
+                    ? doc(firestoreDb, 'artifacts', appId, 'public', 'data', 'users', String(docId))
+                    : doc(firestoreDb, 'artifacts', appId, 'users', currentLoggedUsername, colName, String(docId));
+                if (colName !== 'users') { pendingByCol[colName] = true; updateSyncBadge(); }
+                await setDoc(docRef, stripUndefined(data), { merge: true });
+            } catch (e) {
+                console.error("Cloud save error:", e);
+                window.showAlert('Gagal menyimpan ke database online: ' + (e.code || e.message), 'error');
             }
         }
 
         window.deleteCloudData = async function(colName, docId) {
-            if (firestoreDb && currentUser && currentLoggedUsername && colName !== 'users') {
-                try {
-                    const docRef = doc(firestoreDb, 'artifacts', appId, 'users', currentLoggedUsername, colName, String(docId));
-                    await deleteDoc(docRef);
-                } catch (e) {
-                    console.error("Cloud delete error:", e);
-                }
-            } else if (colName === 'users' && firestoreDb && currentUser) {
-                try {
-                    const docRef = doc(firestoreDb, 'artifacts', appId, 'public', 'data', 'users', String(docId));
-                    await deleteDoc(docRef);
-                } catch (e) {
-                    console.error("Cloud user delete error:", e);
-                }
-            }
             if (colName !== 'users' && currentLoggedUsername) {
                 localStorage.setItem(`app_${currentLoggedUsername}_${colName}`, JSON.stringify(window.db[colName]));
             } else if (colName === 'users') {
                 localStorage.setItem('app_users', JSON.stringify(window.db.users));
+            }
+            if (!cloudMode || !firestoreDb || !currentUser) return;
+
+            try {
+                const docRef = colName === 'users'
+                    ? doc(firestoreDb, 'artifacts', appId, 'public', 'data', 'users', String(docId))
+                    : doc(firestoreDb, 'artifacts', appId, 'users', currentLoggedUsername, colName, String(docId));
+                await deleteDoc(docRef);
+            } catch (e) {
+                console.error("Cloud delete error:", e);
+                window.showAlert('Gagal menghapus di database online: ' + (e.code || e.message), 'error');
             }
         }
 
@@ -722,7 +883,27 @@
                 type === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-rose-50 border border-rose-200 text-rose-800'
             }`;
             box.classList.remove('hidden');
-            setTimeout(() => hideAlert(), 4000);
+            clearTimeout(alertTimer);
+            alertTimer = setTimeout(() => hideAlert(), 4000);
+        }
+
+        let alertTimer = null;
+
+        // Escape teks sebelum dimasukkan ke HTML
+        function esc(v) {
+            return String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        }
+        // Argumen aman untuk atribut onclick
+        function jsArg(v) {
+            return esc(JSON.stringify(String(v ?? '')));
+        }
+        function num(v) {
+            const n = Number(v);
+            return Number.isFinite(n) ? n : 0;
+        }
+        // Firestore tidak menerima '/' pada ID dokumen
+        function invalidKey(v) {
+            return !v || v.includes('/') || v === '.' || v === '..' || v.startsWith('__');
         }
 
         window.hideAlert = function() {
@@ -730,31 +911,54 @@
             if (box) box.classList.add('hidden');
         }
 
+        function enterApp(user, silent = false) {
+            currentLoggedUsername = user;
+            localStorage.setItem(SESSION_KEY, user);
+            loadUserLocalData(user);
+            if (cloudMode && firestoreDb && currentUser) {
+                syncUserCollections(user);
+            }
+
+            document.getElementById('login-container').classList.add('hidden');
+            document.getElementById('main-app-container').classList.remove('hidden');
+            document.getElementById('current-user-badge').innerHTML = `<i class="fa-solid fa-user-shield mr-1"></i> ${esc(user)}`;
+            updateSyncBadge();
+            if (!silent) window.showAlert('Login berhasil!', 'success');
+            switchTab('master');
+        }
+
+        // Login otomatis setelah refresh halaman (sesi tersimpan di perangkat)
+        function tryRestoreSession() {
+            if (currentLoggedUsername) return;
+            const saved = localStorage.getItem(SESSION_KEY);
+            if (!saved) return;
+            if (saved === 'admin' || window.db.users.some(u => u.username === saved)) {
+                enterApp(saved, true);
+            }
+        }
+
         window.handleLogin = function(e) {
             e.preventDefault();
+            if (!usersLoaded) {
+                window.showAlert('Masih menghubungkan ke database, tunggu sebentar...', 'error');
+                return;
+            }
             const user = document.getElementById('login-user').value.trim();
             const pass = document.getElementById('login-pass').value.trim();
 
-            const found = window.db.users.find(u => u.username === user && u.pass === pass);
+            const found = window.db.users.find(u => String(u.username).toLowerCase() === user.toLowerCase() && u.pass === pass);
             if (found || (user === 'admin' && pass === 'admin123')) {
-                currentLoggedUsername = user;
-                loadUserLocalData(user);
-                if (firestoreDb && currentUser) {
-                    syncUserCollections(user);
-                }
-                
-                document.getElementById('login-container').classList.add('hidden');
-                document.getElementById('main-app-container').classList.remove('hidden');
-                document.getElementById('current-user-badge').innerHTML = `<i class="fa-solid fa-user-shield mr-1"></i> ${user}`;
-                window.showAlert('Login berhasil!', 'success');
-                switchTab('master');
+                enterApp(found ? found.username : user);
             } else {
                 window.showAlert('Gagal masuk. Periksa kembali username atau password Anda.', 'error');
             }
         }
 
         window.handleLogout = function() {
+            stopUserCollectionsSync();
             currentLoggedUsername = null;
+            localStorage.removeItem(SESSION_KEY);
+            USER_COLLECTIONS.forEach(c => { window.db[c] = []; });
             document.getElementById('main-app-container').classList.add('hidden');
             document.getElementById('login-container').classList.remove('hidden');
             document.getElementById('form-login').reset();
@@ -806,7 +1010,11 @@
             const plu = document.getElementById('master-plu').value.trim();
             const desc = document.getElementById('master-desc').value.trim();
 
-            if (window.db.master.some(item => item.plu === plu)) {
+            if (invalidKey(plu)) {
+                window.showAlert('PLU tidak boleh kosong atau mengandung karakter "/".', 'error');
+                return;
+            }
+            if (window.db.master.some(item => item.plu.toLowerCase() === plu.toLowerCase())) {
                 window.showAlert(`PLU "${plu}" sudah terdaftar!`, 'error');
                 return;
             }
@@ -844,10 +1052,10 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition-colors";
                 tr.innerHTML = `
-                    <td class="p-4 font-semibold text-slate-700">${item.plu}</td>
-                    <td class="p-4 text-slate-600">${item.desc}</td>
+                    <td class="p-4 font-semibold text-slate-700">${esc(item.plu)}</td>
+                    <td class="p-4 text-slate-600">${esc(item.desc)}</td>
                     <td class="p-4 text-center">
-                        <button onclick="deleteMaster('${item.plu}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus">
+                        <button onclick="deleteMaster(${jsArg(item.plu)})" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </td>
@@ -899,9 +1107,9 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition-colors";
                 tr.innerHTML = `
-                    <td class="p-4 font-semibold text-slate-700">${item.nama}</td>
+                    <td class="p-4 font-semibold text-slate-700">${esc(item.nama)}</td>
                     <td class="p-4 text-center">
-                        <button onclick="deleteBagian('${item.id}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus">
+                        <button onclick="deleteBagian(${jsArg(item.id)})" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </td>
@@ -924,6 +1132,10 @@
                 return;
             }
 
+            if (invalidKey(username)) {
+                window.showAlert('Username tidak boleh mengandung karakter "/".', 'error');
+                return;
+            }
             if (window.db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
                 window.showAlert(`Username "${username}" sudah terdaftar!`, 'error');
                 return;
@@ -969,12 +1181,12 @@
                 tr.className = "hover:bg-slate-50 transition-colors";
                 tr.innerHTML = `
                     <td class="p-4 font-semibold text-slate-700 flex items-center gap-2">
-                        <i class="fa-solid fa-user text-indigo-600"></i> ${item.username} ${item.username === 'admin' ? '<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">Default</span>' : ''}
+                        <i class="fa-solid fa-user text-indigo-600"></i> ${esc(item.username)} ${item.username === 'admin' ? '<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">Default</span>' : ''}
                     </td>
-                    <td class="p-4 text-slate-500 font-mono text-xs">${item.pass}</td>
+                    <td class="p-4 text-slate-500 font-mono text-xs">${esc(item.pass)}</td>
                     <td class="p-4 text-center">
                         ${item.username !== 'admin' ? `
-                        <button onclick="deleteUser('${item.username}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus User">
+                        <button onclick="deleteUser(${jsArg(item.username)})" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus User">
                             <i class="fa-solid fa-xmark"></i>
                         </button>` : '<span class="text-xs text-slate-400 italic">-</span>'}
                     </td>
@@ -1035,6 +1247,11 @@
             const qty = parseInt(document.getElementById(`${type}-qty`).value);
             const keterangan = document.getElementById(`${type}-ket`).value.trim() || '-';
             
+            if (!plu || !Number.isFinite(qty) || qty < 1) {
+                window.showAlert('Pilih barang dan isi Qty minimal 1.', 'error');
+                return;
+            }
+
             let bagian = '-';
             if (type === 'out') {
                 bagian = document.getElementById('out-bagian').value;
@@ -1073,8 +1290,13 @@
             const qtyFisik = parseInt(document.getElementById('so-qty').value);
             const keterangan = document.getElementById('so-ket').value.trim() || '-';
 
-            const totalIn = window.db.in.filter(i => i.plu === plu).reduce((sum, curr) => sum + curr.qty, 0);
-            const totalOut = window.db.out.filter(o => o.plu === plu).reduce((sum, curr) => sum + curr.qty, 0);
+            if (!plu || !Number.isFinite(qtyFisik) || qtyFisik < 0) {
+                window.showAlert('Pilih barang dan isi Qty Fisik (minimal 0).', 'error');
+                return;
+            }
+
+            const totalIn = window.db.in.filter(i => i.plu === plu).reduce((sum, curr) => sum + num(curr.qty), 0);
+            const totalOut = window.db.out.filter(o => o.plu === plu).reduce((sum, curr) => sum + num(curr.qty), 0);
             const qtySistem = totalIn - totalOut;
             const selisih = qtyFisik - qtySistem;
 
@@ -1136,15 +1358,15 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition-colors";
                 tr.innerHTML = `
-                    <td class="p-4 text-slate-600 text-xs font-medium">${item.dateTime}</td>
-                    <td class="p-4 font-semibold text-slate-700">${item.plu}</td>
-                    <td class="p-4 text-slate-600">${desc}</td>
+                    <td class="p-4 text-slate-600 text-xs font-medium">${esc(item.dateTime)}</td>
+                    <td class="p-4 font-semibold text-slate-700">${esc(item.plu)}</td>
+                    <td class="p-4 text-slate-600">${esc(desc)}</td>
                     <td class="p-4 text-right font-semibold text-slate-700">${item.qtySistem}</td>
                     <td class="p-4 text-right font-bold text-blue-600">${item.qtyFisik}</td>
                     <td class="p-4 text-right font-bold ${item.selisih < 0 ? 'text-rose-600' : (item.selisih > 0 ? 'text-emerald-600' : 'text-slate-600')}">${item.selisih > 0 ? '+' + item.selisih : item.selisih}</td>
-                    <td class="p-4 text-slate-500 text-xs">${item.keterangan}</td>
+                    <td class="p-4 text-slate-500 text-xs">${esc(item.keterangan)}</td>
                     <td class="p-4 text-center">
-                        <button onclick="deleteTransaction('so', '${item.id}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus">
+                        <button onclick="deleteTransaction('so', ${jsArg(item.id)})" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </td>
@@ -1177,27 +1399,27 @@
                 
                 if (type === 'out') {
                     tr.innerHTML = `
-                        <td class="p-4 text-slate-600 text-xs font-medium">${item.dateTime}</td>
-                        <td class="p-4 font-semibold text-slate-700">${item.plu}</td>
-                        <td class="p-4 text-slate-600">${desc}</td>
-                        <td class="p-4 text-slate-700 font-medium">${item.bagian || '-'}</td>
+                        <td class="p-4 text-slate-600 text-xs font-medium">${esc(item.dateTime)}</td>
+                        <td class="p-4 font-semibold text-slate-700">${esc(item.plu)}</td>
+                        <td class="p-4 text-slate-600">${esc(desc)}</td>
+                        <td class="p-4 text-slate-700 font-medium">${esc(item.bagian || '-')}</td>
                         <td class="p-4 text-right font-bold text-rose-600">${item.qty}</td>
-                        <td class="p-4 text-slate-500 text-xs">${item.keterangan}</td>
+                        <td class="p-4 text-slate-500 text-xs">${esc(item.keterangan)}</td>
                         <td class="p-4 text-center">
-                            <button onclick="deleteTransaction('out', '${item.id}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus">
+                            <button onclick="deleteTransaction('out', ${jsArg(item.id)})" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus">
                                 <i class="fa-solid fa-xmark"></i>
                             </button>
                         </td>
                     `;
                 } else {
                     tr.innerHTML = `
-                        <td class="p-4 text-slate-600 text-xs font-medium">${item.dateTime}</td>
-                        <td class="p-4 font-semibold text-slate-700">${item.plu}</td>
-                        <td class="p-4 text-slate-600">${desc}</td>
+                        <td class="p-4 text-slate-600 text-xs font-medium">${esc(item.dateTime)}</td>
+                        <td class="p-4 font-semibold text-slate-700">${esc(item.plu)}</td>
+                        <td class="p-4 text-slate-600">${esc(desc)}</td>
                         <td class="p-4 text-right font-bold text-emerald-600">${item.qty}</td>
-                        <td class="p-4 text-slate-500 text-xs">${item.keterangan}</td>
+                        <td class="p-4 text-slate-500 text-xs">${esc(item.keterangan)}</td>
                         <td class="p-4 text-center">
-                            <button onclick="deleteTransaction('in', '${item.id}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus">
+                            <button onclick="deleteTransaction('in', ${jsArg(item.id)})" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus">
                                 <i class="fa-solid fa-xmark"></i>
                             </button>
                         </td>
@@ -1220,11 +1442,11 @@
             window.db.master.forEach(master => {
                 const totalIn = window.db.in
                     .filter(i => i.plu === master.plu)
-                    .reduce((sum, curr) => sum + curr.qty, 0);
+                    .reduce((sum, curr) => sum + num(curr.qty), 0);
 
                 const totalOut = window.db.out
                     .filter(o => o.plu === master.plu)
-                    .reduce((sum, curr) => sum + curr.qty, 0);
+                    .reduce((sum, curr) => sum + num(curr.qty), 0);
 
                 const stock = totalIn - totalOut;
 
@@ -1239,7 +1461,7 @@
                     fisikQty = fisikVal;
                     
                     const diff = fisikVal - stock;
-                    stockVsFisik = diff > 0 ? '+' + diff : diff;
+                    stockVsFisik = diff > 0 ? '+' + diff : String(diff);
                 }
 
                 const tr = document.createElement('tr');
@@ -1253,8 +1475,8 @@
                 }
 
                 tr.innerHTML = `
-                    <td class="p-4 font-semibold text-slate-700">${master.plu}</td>
-                    <td class="p-4 text-slate-600">${master.desc}</td>
+                    <td class="p-4 font-semibold text-slate-700">${esc(master.plu)}</td>
+                    <td class="p-4 text-slate-600">${esc(master.desc)}</td>
                     <td class="p-4 text-right font-semibold text-emerald-600">${totalIn}</td>
                     <td class="p-4 text-right font-semibold text-rose-600">${totalOut}</td>
                     <td class="p-4 text-right font-bold ${stock < 0 ? 'text-rose-700 bg-rose-50' : 'text-slate-800'}">${stock}</td>
@@ -1286,16 +1508,16 @@
             if (rangeLabel) rangeLabel.textContent = `Periode laporan: ${startDate} s/d ${endDate}`;
 
             const filteredIn = window.db.in.filter(item => {
-                const d = item.dateTimeRaw.split('T')[0];
+                const d = String(item.dateTimeRaw || '').split('T')[0];
                 return d >= startDate && d <= endDate;
             });
 
             const filteredOut = window.db.out.filter(item => {
-                const d = item.dateTimeRaw.split('T')[0];
+                const d = String(item.dateTimeRaw || '').split('T')[0];
                 return d >= startDate && d <= endDate;
             });
 
-            let totalQtyOutPeriod = filteredOut.reduce((sum, curr) => sum + curr.qty, 0);
+            let totalQtyOutPeriod = filteredOut.reduce((sum, curr) => sum + num(curr.qty), 0);
             const statOut = document.getElementById('rep-stat-out');
             if (statOut) statOut.textContent = totalQtyOutPeriod;
 
@@ -1307,11 +1529,11 @@
             let suggestions = [];
 
             window.db.master.forEach(master => {
-                const inPeriod = filteredIn.filter(i => i.plu === master.plu).reduce((s, c) => s + c.qty, 0);
-                const outPeriod = filteredOut.filter(o => o.plu === master.plu).reduce((s, c) => s + c.qty, 0);
+                const inPeriod = filteredIn.filter(i => i.plu === master.plu).reduce((s, c) => s + num(c.qty), 0);
+                const outPeriod = filteredOut.filter(o => o.plu === master.plu).reduce((s, c) => s + num(c.qty), 0);
 
-                const totalInAll = window.db.in.filter(i => i.plu === master.plu).reduce((s, c) => s + c.qty, 0);
-                const totalOutAll = window.db.out.filter(o => o.plu === master.plu).reduce((s, c) => s + c.qty, 0);
+                const totalInAll = window.db.in.filter(i => i.plu === master.plu).reduce((s, c) => s + num(c.qty), 0);
+                const totalOutAll = window.db.out.filter(o => o.plu === master.plu).reduce((s, c) => s + num(c.qty), 0);
                 const currentStock = totalInAll - totalOutAll;
 
                 let suggestQty = outPeriod - currentStock;
@@ -1322,8 +1544,8 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition-colors";
                 tr.innerHTML = `
-                    <td class="p-4 font-semibold text-slate-700">${master.plu}</td>
-                    <td class="p-4 text-slate-600">${master.desc}</td>
+                    <td class="p-4 font-semibold text-slate-700">${esc(master.plu)}</td>
+                    <td class="p-4 text-slate-600">${esc(master.desc)}</td>
                     <td class="p-4 text-right text-emerald-600 font-semibold">${inPeriod}</td>
                     <td class="p-4 text-right text-rose-600 font-semibold">${outPeriod}</td>
                     <td class="p-4 text-right font-bold text-slate-800">${currentStock}</td>
@@ -1362,8 +1584,8 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-white/5 transition-colors";
                 tr.innerHTML = `
-                    <td class="p-3.5 font-semibold text-indigo-200">${item.plu}</td>
-                    <td class="p-3.5 text-white">${item.desc}</td>
+                    <td class="p-3.5 font-semibold text-indigo-200">${esc(item.plu)}</td>
+                    <td class="p-3.5 text-white">${esc(item.desc)}</td>
                     <td class="p-3.5 text-right text-rose-300">${item.outPeriod}</td>
                     <td class="p-3.5 text-right font-bold ${item.currentStock <= 3 ? 'text-rose-400' : 'text-white'}">${item.currentStock}</td>
                     <td class="p-3.5 text-center">${statusBadge}</td>
@@ -1382,6 +1604,16 @@
                 mainContainer.classList.add('hidden');
                 loginContainer.classList.remove('hidden');
             }
+            setLoginEnabled(false);
+            // Jika koneksi lambat/tidak ada internet, tetap izinkan login dengan data yang ada
+            setTimeout(() => {
+                if (!usersLoaded) {
+                    usersLoaded = true;
+                    setLoginEnabled(true);
+                    setLoginStatus('<i class="fa-solid fa-wifi"></i> Koneksi lambat/offline. Data akan otomatis tersinkron saat internet tersedia.', 'text-amber-600');
+                    tryRestoreSession();
+                }
+            }, 12000);
             initFirebase();
         };
     </script>
