@@ -134,6 +134,25 @@
                             </button>
                         </div>
                     </form>
+
+                    <!-- Upload Massal Master Barang (CSV) -->
+                    <div class="mt-6 pt-5 border-t border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-file-csv text-emerald-600"></i> Upload Master Barang Sekaligus (CSV)
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Format wajib 2 kolom: <span class="font-semibold text-slate-700">PLU</span> dan <span class="font-semibold text-slate-700">Nama Barang</span> (pemisah koma <code class="bg-slate-100 px-1 rounded">,</code> atau titik koma <code class="bg-slate-100 px-1 rounded">;</code>).</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input type="file" id="master-csv-file" accept=".csv,text/csv" onchange="handleMasterCsvUpload(event)" class="hidden">
+                            <button type="button" onclick="downloadMasterTemplate()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-3.5 rounded-xl transition-all text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-download"></i> Template CSV
+                            </button>
+                            <button type="button" onclick="document.getElementById('master-csv-file').click()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-xl shadow-sm transition-all text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-arrow-up"></i> Upload CSV
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -271,9 +290,14 @@
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+                    <div class="p-6 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3">
                         <h3 class="font-bold text-slate-800 text-base">Riwayat Barang Masuk (IN)</h3>
-                        <span id="count-in" class="text-xs bg-emerald-50 text-emerald-600 font-semibold px-3 py-1 rounded-full">0 Transaksi</span>
+                        <div class="flex items-center gap-2">
+                            <span id="count-in" class="text-xs bg-emerald-50 text-emerald-600 font-semibold px-3 py-1 rounded-full">0 Transaksi</span>
+                            <button type="button" onclick="downloadExcel('in')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all">
+                                <i class="fa-solid fa-file-excel"></i> Download Excel
+                            </button>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-sm">
@@ -333,9 +357,14 @@
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+                    <div class="p-6 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3">
                         <h3 class="font-bold text-slate-800 text-base">Riwayat Barang Keluar (OUT)</h3>
-                        <span id="count-out" class="text-xs bg-rose-50 text-rose-600 font-semibold px-3 py-1 rounded-full">0 Transaksi</span>
+                        <div class="flex items-center gap-2">
+                            <span id="count-out" class="text-xs bg-rose-50 text-rose-600 font-semibold px-3 py-1 rounded-full">0 Transaksi</span>
+                            <button type="button" onclick="downloadExcel('out')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all">
+                                <i class="fa-solid fa-file-excel"></i> Download Excel
+                            </button>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-sm">
@@ -390,9 +419,14 @@
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+                    <div class="p-6 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3">
                         <h3 class="font-bold text-slate-800 text-base">Riwayat Stock Opname (SO) Fisik</h3>
-                        <span id="count-so" class="text-xs bg-blue-50 text-blue-600 font-semibold px-3 py-1 rounded-full">0 Data SO</span>
+                        <div class="flex items-center gap-2">
+                            <span id="count-so" class="text-xs bg-blue-50 text-blue-600 font-semibold px-3 py-1 rounded-full">0 Data SO</span>
+                            <button type="button" onclick="downloadExcel('so')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all">
+                                <i class="fa-solid fa-file-excel"></i> Download Excel
+                            </button>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-sm">
@@ -422,9 +456,14 @@
                             <h3 class="font-bold text-slate-800 text-base">Rekapitulasi Stok (Stock Summary)</h3>
                             <p class="text-xs text-slate-500">In, Out, Stock, Fisik Qty, dan Stock VS Fisik real-time.</p>
                         </div>
-                        <button onclick="renderView()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all">
-                            <i class="fa-solid fa-rotate"></i> Refresh Data
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="renderView()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all">
+                                <i class="fa-solid fa-rotate"></i> Refresh Data
+                            </button>
+                            <button type="button" onclick="downloadExcel('view')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all">
+                                <i class="fa-solid fa-file-excel"></i> Download Excel
+                            </button>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-sm">
@@ -460,9 +499,12 @@
                             <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Tanggal Akhir</label>
                             <input type="date" id="report-end" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
                         </div>
-                        <div class="flex gap-2">
+                        <div class="flex flex-wrap gap-2">
                             <button onclick="generateReport()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl shadow transition-all text-sm flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-search"></i> Generate
+                            </button>
+                            <button type="button" onclick="downloadExcel('report')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-xl shadow transition-all text-sm flex items-center justify-center gap-1.5" title="Download Excel Report & Usulan">
+                                <i class="fa-solid fa-file-excel"></i> Excel
                             </button>
                             <button onclick="window.print()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2.5 px-4 rounded-xl transition-all text-sm" title="Cetak">
                                 <i class="fa-solid fa-print"></i>
@@ -836,6 +878,8 @@
             } catch (e) {
                 console.error("Cloud save error:", e);
                 window.showAlert('Gagal menyimpan ke database online: ' + (e.code || e.message), 'error');
+            } finally {
+                if (colName !== 'users') { pendingByCol[colName] = false; updateSyncBadge(); }
             }
         }
 
@@ -872,6 +916,10 @@
                 populateDropdownsSO();
                 renderSO();
             } else if (tabId === 'view') renderView();
+            else if (tabId === 'report') {
+                const repContainer = document.getElementById('report-result-container');
+                if (repContainer && !repContainer.classList.contains('hidden')) window.generateReport();
+            }
         }
 
         window.showAlert = function(message, type = 'success') {
@@ -1036,7 +1084,7 @@
                 window.showAlert('PLU tidak boleh kosong atau mengandung karakter "/".', 'error');
                 return;
             }
-            if (window.db.master.some(item => item.plu.toLowerCase() === plu.toLowerCase())) {
+            if (window.db.master.some(item => String(item.plu || '').toLowerCase() === plu.toLowerCase())) {
                 window.showAlert(`PLU "${plu}" sudah terdaftar!`, 'error');
                 return;
             }
@@ -1090,7 +1138,7 @@
             e.preventDefault();
             const namaBagian = document.getElementById('master-nama-bagian').value.trim();
 
-            if (window.db.bagian.some(item => item.nama.toLowerCase() === namaBagian.toLowerCase())) {
+            if (window.db.bagian.some(item => String(item.nama || '').toLowerCase() === namaBagian.toLowerCase())) {
                 window.showAlert(`Bagian "${namaBagian}" sudah terdaftar!`, 'error');
                 return;
             }
@@ -1461,6 +1509,36 @@
             });
         }
 
+        // ================= PERHITUNGAN (dipakai tabel & export Excel) =================
+        function sumQtyByPlu(list, filterFn) {
+            const map = new Map();
+            list.forEach(item => {
+                if (filterFn && !filterFn(item)) return;
+                map.set(item.plu, (map.get(item.plu) || 0) + num(item.qty));
+            });
+            return map;
+        }
+
+        function computeStockView() {
+            const inMap = sumQtyByPlu(window.db.in);
+            const outMap = sumQtyByPlu(window.db.out);
+            const latestSO = new Map();
+            window.db.so.forEach(s => {
+                const prev = latestSO.get(s.plu);
+                if (!prev || new Date(s.dateTimeRaw) > new Date(prev.dateTimeRaw)) latestSO.set(s.plu, s);
+            });
+
+            return window.db.master.map(master => {
+                const totalIn = inMap.get(master.plu) || 0;
+                const totalOut = outMap.get(master.plu) || 0;
+                const stock = totalIn - totalOut;
+                const so = latestSO.get(master.plu);
+                const fisik = so ? num(so.qtyFisik) : null;
+                const diff = fisik === null ? null : fisik - stock;
+                return { plu: master.plu, desc: master.desc, totalIn, totalOut, stock, fisik, diff };
+            });
+        }
+
         function renderView() {
             const tbody = document.getElementById('table-view-body');
             if (!tbody) return;
@@ -1471,162 +1549,428 @@
                 return;
             }
 
-            window.db.master.forEach(master => {
-                const totalIn = window.db.in
-                    .filter(i => i.plu === master.plu)
-                    .reduce((sum, curr) => sum + num(curr.qty), 0);
+            computeStockView().forEach(row => {
+                const fisikQty = row.fisik === null ? '-' : row.fisik;
+                const stockVsFisik = row.diff === null ? '-' : (row.diff > 0 ? '+' + row.diff : String(row.diff));
 
-                const totalOut = window.db.out
-                    .filter(o => o.plu === master.plu)
-                    .reduce((sum, curr) => sum + num(curr.qty), 0);
-
-                const stock = totalIn - totalOut;
-
-                const itemSOList = window.db.so.filter(s => s.plu === master.plu);
-                let fisikQty = '-';
-                let stockVsFisik = '-';
-
-                if (itemSOList.length > 0) {
-                    itemSOList.sort((a, b) => new Date(b.dateTimeRaw) - new Date(a.dateTimeRaw));
-                    const latestSO = itemSOList[0];
-                    const fisikVal = latestSO.qtyFisik;
-                    fisikQty = fisikVal;
-                    
-                    const diff = fisikVal - stock;
-                    stockVsFisik = diff > 0 ? '+' + diff : String(diff);
-                }
+                let diffClass = 'text-slate-600';
+                if (row.diff !== null && row.diff < 0) diffClass = 'text-rose-600 font-bold';
+                else if (row.diff !== null && row.diff > 0) diffClass = 'text-emerald-600 font-bold';
 
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition-colors";
-                
-                let diffClass = 'text-slate-600';
-                if (typeof stockVsFisik === 'string' && stockVsFisik !== '-') {
-                    const numDiff = parseInt(stockVsFisik);
-                    if (numDiff < 0) diffClass = 'text-rose-600 font-bold';
-                    else if (numDiff > 0) diffClass = 'text-emerald-600 font-bold';
-                }
-
                 tr.innerHTML = `
-                    <td class="p-4 font-semibold text-slate-700">${esc(master.plu)}</td>
-                    <td class="p-4 text-slate-600">${esc(master.desc)}</td>
-                    <td class="p-4 text-right font-semibold text-emerald-600">${totalIn}</td>
-                    <td class="p-4 text-right font-semibold text-rose-600">${totalOut}</td>
-                    <td class="p-4 text-right font-bold ${stock < 0 ? 'text-rose-700 bg-rose-50' : 'text-slate-800'}">${stock}</td>
+                    <td class="p-4 font-semibold text-slate-700">${esc(row.plu)}</td>
+                    <td class="p-4 text-slate-600">${esc(row.desc)}</td>
+                    <td class="p-4 text-right font-semibold text-emerald-600">${row.totalIn}</td>
+                    <td class="p-4 text-right font-semibold text-rose-600">${row.totalOut}</td>
+                    <td class="p-4 text-right font-bold ${row.stock < 0 ? 'text-rose-700 bg-rose-50' : 'text-slate-800'}">${row.stock}</td>
                     <td class="p-4 text-right font-semibold text-blue-600">${fisikQty}</td>
                     <td class="p-4 text-right ${diffClass}">${stockVsFisik}</td>
                 `;
                 tbody.appendChild(tr);
             });
         }
+        // Dipanggil dari tombol "Refresh Data" (onclick) sehingga harus tersedia di window
+        window.renderView = renderView;
 
-        window.generateReport = function() {
+        function getReportRange() {
             const startDate = document.getElementById('report-start').value;
             const endDate = document.getElementById('report-end').value;
 
             if (!startDate || !endDate) {
                 window.showAlert('Silakan pilih Tanggal Awal dan Tanggal Akhir.', 'error');
-                return;
+                return null;
             }
-
             if (startDate > endDate) {
                 window.showAlert('Tanggal Awal tidak boleh lebih besar dari Tanggal Akhir.', 'error');
-                return;
+                return null;
             }
+            return { startDate, endDate };
+        }
+
+        function computeReport(startDate, endDate) {
+            const inRange = item => {
+                const d = String(item.dateTimeRaw || '').split('T')[0];
+                return d >= startDate && d <= endDate;
+            };
+            const inPeriodMap = sumQtyByPlu(window.db.in, inRange);
+            const outPeriodMap = sumQtyByPlu(window.db.out, inRange);
+            const inAllMap = sumQtyByPlu(window.db.in);
+            const outAllMap = sumQtyByPlu(window.db.out);
+
+            const totalQtyOutPeriod = window.db.out.filter(inRange).reduce((s, c) => s + num(c.qty), 0);
+            let activeItemsCount = 0;
+
+            const rows = window.db.master.map(master => {
+                const inPeriod = inPeriodMap.get(master.plu) || 0;
+                const outPeriod = outPeriodMap.get(master.plu) || 0;
+                const currentStock = (inAllMap.get(master.plu) || 0) - (outAllMap.get(master.plu) || 0);
+                const suggestQty = Math.max(0, outPeriod - currentStock);
+                if (inPeriod > 0 || outPeriod > 0) activeItemsCount++;
+
+                const needOrder = suggestQty > 0 || currentStock <= 3;
+                const qtyNeeded = suggestQty > 0 ? suggestQty : (5 - currentStock);
+                const orderQty = qtyNeeded > 0 ? qtyNeeded : 5;
+                const statusText = needOrder ? `Usulan Order: +${orderQty} unit` : 'Stok Aman (Cukup)';
+
+                return { plu: master.plu, desc: master.desc, inPeriod, outPeriod, currentStock, suggestQty, needOrder, statusText };
+            });
+
+            const suggestions = [...rows].sort((a, b) => b.suggestQty - a.suggestQty);
+            const needOrderCount = rows.filter(r => r.needOrder).length;
+
+            return { rows, suggestions, totalQtyOutPeriod, activeItemsCount, needOrderCount };
+        }
+
+        window.generateReport = function() {
+            const range = getReportRange();
+            if (!range) return;
+            const { startDate, endDate } = range;
 
             const container = document.getElementById('report-result-container');
             if (container) container.classList.remove('hidden');
-            
+
             const rangeLabel = document.getElementById('report-range-label');
             if (rangeLabel) rangeLabel.textContent = `Periode laporan: ${startDate} s/d ${endDate}`;
 
-            const filteredIn = window.db.in.filter(item => {
-                const d = String(item.dateTimeRaw || '').split('T')[0];
-                return d >= startDate && d <= endDate;
-            });
+            const report = computeReport(startDate, endDate);
 
-            const filteredOut = window.db.out.filter(item => {
-                const d = String(item.dateTimeRaw || '').split('T')[0];
-                return d >= startDate && d <= endDate;
-            });
-
-            let totalQtyOutPeriod = filteredOut.reduce((sum, curr) => sum + num(curr.qty), 0);
             const statOut = document.getElementById('rep-stat-out');
-            if (statOut) statOut.textContent = totalQtyOutPeriod;
+            if (statOut) statOut.textContent = report.totalQtyOutPeriod;
+            const statItems = document.getElementById('rep-stat-items');
+            if (statItems) statItems.textContent = report.activeItemsCount;
+            const statSuggest = document.getElementById('rep-stat-suggest');
+            if (statSuggest) statSuggest.textContent = `${report.needOrderCount} Item`;
 
             const tbodyReport = document.getElementById('table-report-body');
-            if (!tbodyReport) return;
-            tbodyReport.innerHTML = '';
-
-            let activeItemsCount = 0;
-            let suggestions = [];
-
-            window.db.master.forEach(master => {
-                const inPeriod = filteredIn.filter(i => i.plu === master.plu).reduce((s, c) => s + num(c.qty), 0);
-                const outPeriod = filteredOut.filter(o => o.plu === master.plu).reduce((s, c) => s + num(c.qty), 0);
-
-                const totalInAll = window.db.in.filter(i => i.plu === master.plu).reduce((s, c) => s + num(c.qty), 0);
-                const totalOutAll = window.db.out.filter(o => o.plu === master.plu).reduce((s, c) => s + num(c.qty), 0);
-                const currentStock = totalInAll - totalOutAll;
-
-                let suggestQty = outPeriod - currentStock;
-                if (suggestQty < 0) suggestQty = 0;
-
-                if (inPeriod > 0 || outPeriod > 0) activeItemsCount++;
-
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition-colors";
-                tr.innerHTML = `
-                    <td class="p-4 font-semibold text-slate-700">${esc(master.plu)}</td>
-                    <td class="p-4 text-slate-600">${esc(master.desc)}</td>
-                    <td class="p-4 text-right text-emerald-600 font-semibold">${inPeriod}</td>
-                    <td class="p-4 text-right text-rose-600 font-semibold">${outPeriod}</td>
-                    <td class="p-4 text-right font-bold text-slate-800">${currentStock}</td>
-                `;
-                tbodyReport.appendChild(tr);
-
-                suggestions.push({
-                    plu: master.plu,
-                    desc: master.desc,
-                    outPeriod,
-                    currentStock,
-                    suggestQty
+            if (tbodyReport) {
+                tbodyReport.innerHTML = '';
+                report.rows.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 transition-colors";
+                    tr.innerHTML = `
+                        <td class="p-4 font-semibold text-slate-700">${esc(row.plu)}</td>
+                        <td class="p-4 text-slate-600">${esc(row.desc)}</td>
+                        <td class="p-4 text-right text-emerald-600 font-semibold">${row.inPeriod}</td>
+                        <td class="p-4 text-right text-rose-600 font-semibold">${row.outPeriod}</td>
+                        <td class="p-4 text-right font-bold text-slate-800">${row.currentStock}</td>
+                    `;
+                    tbodyReport.appendChild(tr);
                 });
-            });
-
-            const statItems = document.getElementById('rep-stat-items');
-            if (statItems) statItems.textContent = activeItemsCount;
-
-            suggestions.sort((a, b) => b.suggestQty - a.suggestQty);
+            }
 
             const tbodySuggest = document.getElementById('table-suggestion-body');
-            if (!tbodySuggest) return;
-            tbodySuggest.innerHTML = '';
+            if (tbodySuggest) {
+                tbodySuggest.innerHTML = '';
+                report.suggestions.forEach(item => {
+                    const statusBadge = item.needOrder
+                        ? `<span class="bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-semibold">⚠️ ${esc(item.statusText)}</span>`
+                        : `<span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold">${esc(item.statusText)}</span>`;
 
-            let needOrderCount = 0;
-            suggestions.forEach(item => {
-                let statusBadge = '';
-                if (item.suggestQty > 0 || item.currentStock <= 3) {
-                    needOrderCount++;
-                    const qtyNeeded = item.suggestQty > 0 ? item.suggestQty : (5 - item.currentStock);
-                    statusBadge = `<span class="bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-semibold">⚠️ Usulan Order: +${qtyNeeded > 0 ? qtyNeeded : 5} unit</span>`;
-                } else {
-                    statusBadge = `<span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold">Stok Aman (Cukup)</span>`;
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-white/5 transition-colors";
+                    tr.innerHTML = `
+                        <td class="p-3.5 font-semibold text-indigo-200">${esc(item.plu)}</td>
+                        <td class="p-3.5 text-white">${esc(item.desc)}</td>
+                        <td class="p-3.5 text-right text-rose-300">${item.outPeriod}</td>
+                        <td class="p-3.5 text-right font-bold ${item.currentStock <= 3 ? 'text-rose-400' : 'text-white'}">${item.currentStock}</td>
+                        <td class="p-3.5 text-center">${statusBadge}</td>
+                    `;
+                    tbodySuggest.appendChild(tr);
+                });
+            }
+        }
+
+        // ================= DOWNLOAD EXCEL =================
+        const XLSX_SOURCES = [
+            'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
+            'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+        ];
+        let xlsxPromise = null;
+
+        // Library Excel (SheetJS) baru dimuat saat tombol download pertama kali diklik
+        function loadXLSX() {
+            if (window.XLSX) return Promise.resolve(window.XLSX);
+            if (!xlsxPromise) {
+                xlsxPromise = new Promise((resolve, reject) => {
+                    const tryLoad = (idx) => {
+                        if (idx >= XLSX_SOURCES.length) {
+                            xlsxPromise = null;
+                            reject(new Error('Library Excel gagal dimuat'));
+                            return;
+                        }
+                        const s = document.createElement('script');
+                        s.src = XLSX_SOURCES[idx];
+                        s.onload = () => window.XLSX ? resolve(window.XLSX) : tryLoad(idx + 1);
+                        s.onerror = () => { s.remove(); tryLoad(idx + 1); };
+                        document.head.appendChild(s);
+                    };
+                    tryLoad(0);
+                });
+            }
+            return xlsxPromise;
+        }
+
+        function fileStamp() {
+            const d = new Date();
+            const p = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+        }
+
+        function safeFilePart(v) {
+            return String(v || '').replace(/[^a-zA-Z0-9_-]+/g, '_');
+        }
+
+        async function writeExcelFile(fileBase, sheets) {
+            let XL;
+            try {
+                XL = await loadXLSX();
+            } catch (e) {
+                window.showAlert('Gagal memuat library Excel. Periksa koneksi internet lalu coba lagi.', 'error');
+                return;
+            }
+
+            const wb = XL.utils.book_new();
+            sheets.forEach(sheet => {
+                const aoa = [sheet.headers, ...sheet.rows];
+                const ws = XL.utils.aoa_to_sheet(aoa);
+                // Lebar kolom otomatis menyesuaikan isi
+                ws['!cols'] = sheet.headers.map((h, i) => {
+                    const maxLen = sheet.rows.reduce((m, r) => Math.max(m, String(r[i] ?? '').length), String(h).length);
+                    return { wch: Math.min(60, maxLen + 2) };
+                });
+                if (sheet.rows.length > 0) {
+                    ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: sheet.rows.length, c: sheet.headers.length - 1 } }) };
                 }
-
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-white/5 transition-colors";
-                tr.innerHTML = `
-                    <td class="p-3.5 font-semibold text-indigo-200">${esc(item.plu)}</td>
-                    <td class="p-3.5 text-white">${esc(item.desc)}</td>
-                    <td class="p-3.5 text-right text-rose-300">${item.outPeriod}</td>
-                    <td class="p-3.5 text-right font-bold ${item.currentStock <= 3 ? 'text-rose-400' : 'text-white'}">${item.currentStock}</td>
-                    <td class="p-3.5 text-center">${statusBadge}</td>
-                `;
-                tbodySuggest.appendChild(tr);
+                XL.utils.book_append_sheet(wb, ws, sheet.name.replace(/[:\\/?*\[\]]/g, '').substring(0, 31));
             });
 
-            const statSuggest = document.getElementById('rep-stat-suggest');
-            if (statSuggest) statSuggest.textContent = `${needOrderCount} Item`;
+            const fileName = `${fileBase}_${safeFilePart(currentLoggedUsername)}_${fileStamp()}.xlsx`;
+            XL.writeFile(wb, fileName);
+            window.showAlert(`File ${fileName} berhasil diunduh.`);
+        }
+
+        window.downloadExcel = function(type) {
+            const masterMap = new Map(window.db.master.map(m => [m.plu, m.desc]));
+            const descOf = plu => masterMap.has(plu) ? masterMap.get(plu) : '(Barang Dihapus)';
+            const byDateDesc = (a, b) => new Date(b.dateTimeRaw) - new Date(a.dateTimeRaw);
+            let fileBase, sheets;
+
+            if (type === 'in') {
+                fileBase = 'Menu_In';
+                sheets = [{
+                    name: 'Barang Masuk (IN)',
+                    headers: ['Tanggal & Waktu', 'PLU', 'Desc (Nama Barang)', 'Qty', 'Keterangan'],
+                    rows: [...window.db.in].sort(byDateDesc).map(i => [i.dateTime || i.dateTimeRaw || '', String(i.plu ?? ''), descOf(i.plu), num(i.qty), i.keterangan || '-'])
+                }];
+            } else if (type === 'out') {
+                fileBase = 'Menu_Out';
+                sheets = [{
+                    name: 'Barang Keluar (OUT)',
+                    headers: ['Tanggal & Waktu', 'PLU', 'Desc (Nama Barang)', 'Bagian', 'Qty', 'Keterangan'],
+                    rows: [...window.db.out].sort(byDateDesc).map(o => [o.dateTime || o.dateTimeRaw || '', String(o.plu ?? ''), descOf(o.plu), o.bagian || '-', num(o.qty), o.keterangan || '-'])
+                }];
+            } else if (type === 'so') {
+                fileBase = 'Menu_SO_Fisik';
+                sheets = [{
+                    name: 'Stock Opname Fisik',
+                    headers: ['Tanggal & Waktu', 'PLU', 'Desc (Nama Barang)', 'Qty Sistem', 'Qty Fisik', 'Selisih', 'Keterangan'],
+                    rows: [...window.db.so].sort(byDateDesc).map(s => [s.dateTime || s.dateTimeRaw || '', String(s.plu ?? ''), descOf(s.plu), num(s.qtySistem), num(s.qtyFisik), num(s.selisih), s.keterangan || '-'])
+                }];
+            } else if (type === 'view') {
+                fileBase = 'Stock_View';
+                sheets = [{
+                    name: 'Stock Summary',
+                    headers: ['PLU', 'Desc (Nama Barang)', 'Qty In', 'Qty Out', 'Stock (Sisa)', 'Fisik Qty', 'Stock VS Fisik'],
+                    rows: computeStockView().map(r => [String(r.plu ?? ''), r.desc, r.totalIn, r.totalOut, r.stock, r.fisik === null ? '-' : r.fisik, r.diff === null ? '-' : r.diff])
+                }];
+            } else if (type === 'report') {
+                const range = getReportRange();
+                if (!range) return;
+                const report = computeReport(range.startDate, range.endDate);
+                fileBase = `Report_Usulan_${range.startDate}_sd_${range.endDate}`;
+                sheets = [{
+                    name: 'Rekap Periode',
+                    headers: ['PLU', 'Desc (Nama Barang)', 'In (Periode)', 'Out (Periode)', 'Stok Saat Ini'],
+                    rows: report.rows.map(r => [String(r.plu ?? ''), r.desc, r.inPeriod, r.outPeriod, r.currentStock])
+                }, {
+                    name: 'Usulan Pengadaan',
+                    headers: ['PLU', 'Nama Barang', 'Total Keluar', 'Stok Sisa', 'Status Usulan / Reorder'],
+                    rows: report.suggestions.map(r => [String(r.plu ?? ''), r.desc, r.outPeriod, r.currentStock, r.statusText])
+                }];
+            } else {
+                return;
+            }
+
+            if (sheets.every(s => s.rows.length === 0)) {
+                window.showAlert('Tidak ada data untuk diunduh.', 'error');
+                return;
+            }
+            writeExcelFile(fileBase, sheets);
+        }
+
+        // ================= UPLOAD MASTER BARANG (CSV) =================
+        window.downloadMasterTemplate = function() {
+            const csv = '\uFEFFPLU,Nama Barang\r\nPLU001,Kertas A4 80gsm\r\nPLU002,Pulpen Hitam\r\n';
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Template_Master_Barang.csv';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        // Baca file sebagai UTF-8; jika gagal (CSV dari Excel lama/ANSI) pakai Windows-1252
+        async function readCsvText(file) {
+            const buf = await file.arrayBuffer();
+            try {
+                return new TextDecoder('utf-8', { fatal: true }).decode(buf);
+            } catch (e) {
+                return new TextDecoder('windows-1252').decode(buf);
+            }
+        }
+
+        // Parser CSV: mendukung pemisah koma (,), titik koma (;) dari Excel Indonesia, dan tab
+        function parseCSV(text) {
+            text = text.replace(/^\uFEFF/, '');
+            let delim = null;
+            const sepMatch = text.match(/^sep=(.)\r?\n/i);
+            if (sepMatch) {
+                delim = sepMatch[1];
+                text = text.slice(sepMatch[0].length);
+            }
+            if (!delim) {
+                const firstLine = (text.split(/\r?\n/).find(l => l.trim() !== '') || '').replace(/"[^"]*"/g, '');
+                const counts = { ',': 0, ';': 0, '\t': 0 };
+                for (const ch of firstLine) if (ch in counts) counts[ch]++;
+                delim = Object.keys(counts).reduce((a, b) => counts[b] > counts[a] ? b : a, ',');
+            }
+
+            const rows = [];
+            let row = [], field = '', inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i];
+                if (inQuotes) {
+                    if (c === '"') {
+                        if (text[i + 1] === '"') { field += '"'; i++; }
+                        else inQuotes = false;
+                    } else field += c;
+                } else if (c === '"') {
+                    inQuotes = true;
+                } else if (c === delim) {
+                    row.push(field); field = '';
+                } else if (c === '\n') {
+                    row.push(field); rows.push(row); row = []; field = '';
+                } else if (c !== '\r') {
+                    field += c;
+                }
+            }
+            if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+            return rows.filter(r => r.some(cell => cell.trim() !== ''));
+        }
+
+        async function saveCloudBatch(colName, items, idOf) {
+            if (currentLoggedUsername) {
+                localStorage.setItem(`app_${currentLoggedUsername}_${colName}`, JSON.stringify(window.db[colName]));
+            }
+            if (!cloudMode || !firestoreDb || !currentUser) return;
+
+            pendingByCol[colName] = true;
+            updateSyncBadge();
+            try {
+                for (let i = 0; i < items.length; i += 400) {
+                    const batch = writeBatch(firestoreDb);
+                    items.slice(i, i + 400).forEach(item => {
+                        const ref = doc(firestoreDb, 'artifacts', appId, 'users', currentLoggedUsername, colName, String(idOf(item)));
+                        batch.set(ref, stripUndefined(item), { merge: true });
+                    });
+                    await batch.commit();
+                }
+            } catch (e) {
+                console.error('Batch save error:', e);
+                window.showAlert('Gagal menyimpan hasil upload ke database online: ' + (e.code || e.message), 'error');
+            } finally {
+                pendingByCol[colName] = false;
+                updateSyncBadge();
+            }
+        }
+
+        window.handleMasterCsvUpload = async function(e) {
+            const input = e.target;
+            const file = input.files && input.files[0];
+            input.value = ''; // agar file yang sama bisa dipilih ulang
+            if (!file) return;
+
+            if (!/\.csv$/i.test(file.name)) {
+                window.showAlert('File harus berformat .csv (kolom: PLU, Nama Barang).', 'error');
+                return;
+            }
+
+            let rows;
+            try {
+                rows = parseCSV(await readCsvText(file));
+            } catch (err) {
+                console.error('CSV read error:', err);
+                window.showAlert('File CSV tidak dapat dibaca.', 'error');
+                return;
+            }
+            if (rows.length === 0) {
+                window.showAlert('File CSV kosong.', 'error');
+                return;
+            }
+
+            // Lewati baris judul jika ada (hanya jika sel pertama/kedua memang judul kolom, bukan kode seperti PLU001)
+            const first = rows[0].map(c => c.trim().toLowerCase());
+            const h0 = (first[0] || '').replace(/[^a-z0-9 ]/g, '').trim();
+            const h1 = (first[1] || '').replace(/[^a-z0-9 ]/g, '').trim();
+            const hasHeader = /^(plu|kode|kode plu|kode barang|no plu|id)$/.test(h0)
+                || /^(nama|nama barang|desc|deskripsi|description|barang|item|nama item)$/.test(h1);
+            const startLine = hasHeader ? 2 : 1;
+            const dataRows = hasHeader ? rows.slice(1) : rows;
+
+            const existing = new Set(window.db.master.map(m => String(m.plu).toLowerCase()));
+            const seen = new Set();
+            const toAdd = [];
+            const skipped = [];
+
+            dataRows.forEach((r, idx) => {
+                const line = idx + startLine;
+                const plu = (r[0] || '').trim();
+                const desc = (r[1] || '').trim();
+                const key = plu.toLowerCase();
+
+                if (!plu || !desc) skipped.push(`Baris ${line}: PLU / Nama Barang kosong`);
+                else if (invalidKey(plu)) skipped.push(`Baris ${line}: PLU "${plu}" tidak valid (mengandung "/")`);
+                else if (existing.has(key)) skipped.push(`Baris ${line}: PLU "${plu}" sudah terdaftar`);
+                else if (seen.has(key)) skipped.push(`Baris ${line}: PLU "${plu}" dobel di file`);
+                else {
+                    seen.add(key);
+                    toAdd.push({ plu, desc });
+                }
+            });
+
+            if (toAdd.length === 0) {
+                console.warn('Upload CSV dilewati:', skipped);
+                window.showAlert(`Tidak ada barang baru yang bisa ditambahkan. ${skipped.length} baris dilewati (duplikat/kosong).`, 'error');
+                return;
+            }
+
+            let msg = `File: ${file.name}\n\nBarang baru yang akan ditambahkan: ${toAdd.length}`;
+            if (skipped.length > 0) {
+                msg += `\nBaris dilewati: ${skipped.length}\n- ` + skipped.slice(0, 8).join('\n- ');
+                if (skipped.length > 8) msg += `\n- ...dan ${skipped.length - 8} baris lainnya`;
+            }
+            msg += '\n\nLanjutkan upload?';
+            if (!confirm(msg)) return;
+
+            window.db.master.push(...toAdd);
+            saveCloudBatch('master', toAdd, item => item.plu);
+            renderMaster();
+            window.showAlert(`${toAdd.length} barang berhasil ditambahkan dari CSV${skipped.length ? ` (${skipped.length} baris dilewati)` : ''}.`);
         }
 
         window.onload = function() {
