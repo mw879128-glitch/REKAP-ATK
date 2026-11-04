@@ -80,7 +80,7 @@
                         <button onclick="switchTab('bagian')" id="btn-bagian" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-indigo-100 hover:bg-indigo-600">
                             <i class="fa-solid fa-sitemap mr-1.5"></i> Master Bagian
                         </button>
-                        <button onclick="switchTab('users')" id="btn-users" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-indigo-100 hover:bg-indigo-600">
+                        <button onclick="switchTab('users')" id="btn-users" style="display:none" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-indigo-100 hover:bg-indigo-600">
                             <i class="fa-solid fa-users-gear mr-1.5"></i> Master User
                         </button>
                         <button onclick="switchTab('in')" id="btn-in" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-indigo-100 hover:bg-indigo-600">
@@ -911,6 +911,20 @@
             if (box) box.classList.add('hidden');
         }
 
+        // Hak akses: menu Master User hanya untuk akun admin
+        function isAdmin() {
+            return currentLoggedUsername === DEFAULT_ADMIN.username;
+        }
+
+        function applyRoleAccess() {
+            const btnUsers = document.getElementById('btn-users');
+            if (btnUsers) btnUsers.style.display = isAdmin() ? '' : 'none';
+            if (!isAdmin()) {
+                const tbody = document.getElementById('table-users-body');
+                if (tbody) tbody.innerHTML = '';
+            }
+        }
+
         function enterApp(user, silent = false) {
             currentLoggedUsername = user;
             localStorage.setItem(SESSION_KEY, user);
@@ -921,7 +935,10 @@
 
             document.getElementById('login-container').classList.add('hidden');
             document.getElementById('main-app-container').classList.remove('hidden');
-            document.getElementById('current-user-badge').innerHTML = `<i class="fa-solid fa-user-shield mr-1"></i> ${esc(user)}`;
+            document.getElementById('current-user-badge').innerHTML = isAdmin()
+                ? `<i class="fa-solid fa-user-shield mr-1"></i> ${esc(user)} (Admin)`
+                : `<i class="fa-solid fa-user mr-1"></i> ${esc(user)}`;
+            applyRoleAccess();
             updateSyncBadge();
             if (!silent) window.showAlert('Login berhasil!', 'success');
             switchTab('master');
@@ -959,6 +976,7 @@
             currentLoggedUsername = null;
             localStorage.removeItem(SESSION_KEY);
             USER_COLLECTIONS.forEach(c => { window.db[c] = []; });
+            applyRoleAccess();
             document.getElementById('main-app-container').classList.add('hidden');
             document.getElementById('login-container').classList.remove('hidden');
             document.getElementById('form-login').reset();
@@ -966,6 +984,10 @@
         }
 
         window.switchTab = function(tabId) {
+            if (tabId === 'users' && !isAdmin()) {
+                window.showAlert('Menu Master User hanya dapat diakses oleh admin.', 'error');
+                tabId = 'master';
+            }
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.className = "tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all text-indigo-100 hover:bg-indigo-600";
@@ -1120,6 +1142,10 @@
 
         window.saveNewUser = function(e) {
             e.preventDefault();
+            if (!isAdmin()) {
+                window.showAlert('Hanya admin yang dapat menambah user.', 'error');
+                return;
+            }
             const usernameInput = document.getElementById('new-username');
             const passwordInput = document.getElementById('new-password');
             if (!usernameInput || !passwordInput) return;
@@ -1152,6 +1178,10 @@
         }
 
         window.deleteUser = function(username) {
+            if (!isAdmin()) {
+                window.showAlert('Hanya admin yang dapat menghapus user.', 'error');
+                return;
+            }
             if (username === 'admin') {
                 window.showAlert('User default "admin" tidak dapat dihapus!', 'error');
                 return;
@@ -1168,6 +1198,8 @@
             const tbody = document.getElementById('table-users-body');
             if (!tbody) return;
             tbody.innerHTML = '';
+            // Daftar user & password tidak ditampilkan untuk selain admin
+            if (!isAdmin()) return;
             const countEl = document.getElementById('count-users');
             if (countEl) countEl.textContent = `${window.db.users.length} User`;
 
