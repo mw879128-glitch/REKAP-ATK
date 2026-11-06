@@ -623,7 +623,7 @@
                             </div>
                             <div>
                                 <h3 class="font-bold text-lg">Usulan & Rekomendasi Pengadaan Barang Selanjutnya</h3>
-                                <p class="text-xs text-indigo-200">Dihitung otomatis berdasarkan tingkat pengeluaran dan stok yang menipis.</p>
+                                <p class="text-xs text-indigo-200">Rekomendasi total pengadaan barang berdasarkan pergerakan stok.</p>
                             </div>
                         </div>
                         <div class="overflow-x-auto bg-white/5 rounded-xl border border-white/10">
@@ -1647,6 +1647,10 @@
         }
 
         function computeReport(startDate, endDate) {
+            const [sy, sm, sd] = startDate.split('-').map(Number);
+            const [ey, em, ed] = endDate.split('-').map(Number);
+            const periodDays = Math.max(1, Math.round((Date.UTC(ey, em - 1, ed) - Date.UTC(sy, sm - 1, sd)) / 86400000) + 1);
+
             const inRange = item => {
                 const d = String(item.dateTimeRaw || '').split('T')[0];
                 return d >= startDate && d <= endDate;
@@ -1662,22 +1666,57 @@
             const rows = window.db.master.map(master => {
                 const inPeriod = inPeriodMap.get(master.plu) || 0;
                 const outPeriod = outPeriodMap.get(master.plu) || 0;
-                const currentStock = (inAllMap.get(master.plu) || 0) - (outAllMap.get(master.plu) || 0);
-                const suggestQty = Math.max(0, outPeriod - currentStock);
+                const totalInAll = inAllMap.get(master.plu) || 0;
+                const totalOutAll = outAllMap.get(master.plu) || 0;
+                const currentStock = totalInAll - totalOutAll;
                 if (inPeriod > 0 || outPeriod > 0) activeItemsCount++;
 
-                const needOrder = suggestQty > 0 || currentStock <= 3;
-                const qtyNeeded = suggestQty > 0 ? suggestQty : (5 - currentStock);
-                const orderQty = qtyNeeded > 0 ? qtyNeeded : 5;
-                const statusText = needOrder ? `Usulan Order: +${orderQty} unit` : 'Stok Aman (Cukup)';
+                const avgOut = outPeriod / periodDays;
+                const avgOutDisplay = Number(avgOut.toFixed(2));
 
-                return { plu: master.plu, desc: master.desc, inPeriod, outPeriod, currentStock, suggestQty, needOrder, statusText };
+                let suggestQty = 0;
+                let needOrder = false;
+                let statusText = '';
+
+                if (outPeriod > 0) {
+                    const targetNeed = avgOut * 30 * 1.2;
+                    const rawOrder = targetNeed - currentStock;
+                    suggestQty = rawOrder > 0 ? Math.ceil(rawOrder) : 0;
+                    if (suggestQty > 0) {
+                        needOrder = true;
+                        statusText = `Rekomendasi PP: ${suggestQty} unit`;
+                    } else {
+                        needOrder = false;
+                        statusText = 'Tidak Ada Rekomendasi PP';
+                    }
+                } else if (currentStock > 0) {
+                    suggestQty = 0;
+                    needOrder = false;
+                    statusText = 'Tidak Ada Rekomendasi PP';
+                } else {
+                    const base30 = totalInAll > 0 ? (totalInAll * 0.3) : 1;
+                    suggestQty = Math.max(1, Math.ceil(base30 - currentStock));
+                    needOrder = true;
+                    statusText = `Rekomendasi PP: ${suggestQty} unit`;
+                }
+
+                return {
+                    plu: master.plu,
+                    desc: master.desc,
+                    inPeriod,
+                    outPeriod,
+                    avgOut: avgOutDisplay,
+                    currentStock,
+                    suggestQty,
+                    needOrder,
+                    statusText
+                };
             });
 
             const suggestions = [...rows].sort((a, b) => b.suggestQty - a.suggestQty);
             const needOrderCount = rows.filter(r => r.needOrder).length;
 
-            return { rows, suggestions, totalQtyOutPeriod, activeItemsCount, needOrderCount };
+            return { rows, suggestions, totalQtyOutPeriod, activeItemsCount, needOrderCount, periodDays };
         }
 
         window.generateReport = function() {
@@ -1688,10 +1727,10 @@
             const container = document.getElementById('report-result-container');
             if (container) container.classList.remove('hidden');
 
-            const rangeLabel = document.getElementById('report-range-label');
-            if (rangeLabel) rangeLabel.textContent = `Periode laporan: ${startDate} s/d ${endDate}`;
-
             const report = computeReport(startDate, endDate);
+
+            const rangeLabel = document.getElementById('report-range-label');
+            if (rangeLabel) rangeLabel.textContent = `Periode laporan: ${startDate} s/d ${endDate} (${report.periodDays} hari)`;
 
             const statOut = document.getElementById('rep-stat-out');
             if (statOut) statOut.textContent = report.totalQtyOutPeriod;
@@ -1731,7 +1770,7 @@
                         <td class="p-3.5 font-semibold text-indigo-200">${esc(item.plu)}</td>
                         <td class="p-3.5 text-white">${esc(item.desc)}</td>
                         <td class="p-3.5 text-right text-rose-300">${item.outPeriod}</td>
-                        <td class="p-3.5 text-right font-bold ${item.currentStock <= 3 ? 'text-rose-400' : 'text-white'}">${item.currentStock}</td>
+                        <td class="p-3.5 text-right font-bold ${item.currentStock <= 0 ? 'text-rose-400' : 'text-white'}">${item.currentStock}</td>
                         <td class="p-3.5 text-center">${statusBadge}</td>
                     `;
                     tbodySuggest.appendChild(tr);
