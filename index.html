@@ -287,6 +287,25 @@
                             </button>
                         </div>
                     </form>
+
+                    <!-- Upload Massal Transaksi IN (CSV) -->
+                    <div class="mt-6 pt-5 border-t border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-file-csv text-emerald-600"></i> Upload Barang Masuk Sekaligus (CSV)
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Format kolom: <span class="font-semibold text-slate-700">Tanggal, PLU, Qty</span> (opsional kolom ke-4: <span class="font-semibold text-slate-700">Keterangan</span>).</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input type="file" id="in-csv-file" accept=".csv,text/csv" onchange="handleTransactionCsvUpload(event, 'in')" class="hidden">
+                            <button type="button" onclick="downloadCsvTemplate('in')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-3.5 rounded-xl transition-all text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-download"></i> Template CSV
+                            </button>
+                            <button type="button" onclick="document.getElementById('in-csv-file').click()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-xl shadow-sm transition-all text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-arrow-up"></i> Upload CSV
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -354,6 +373,25 @@
                             </button>
                         </div>
                     </form>
+
+                    <!-- Upload Massal Transaksi OUT (CSV) -->
+                    <div class="mt-6 pt-5 border-t border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-file-csv text-rose-600"></i> Upload Barang Keluar Sekaligus (CSV)
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Format kolom: <span class="font-semibold text-slate-700">Tanggal, PLU, Qty</span> (opsional kolom ke-4: <span class="font-semibold text-slate-700">Bagian</span>, ke-5: <span class="font-semibold text-slate-700">Keterangan</span>).</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input type="file" id="out-csv-file" accept=".csv,text/csv" onchange="handleTransactionCsvUpload(event, 'out')" class="hidden">
+                            <button type="button" onclick="downloadCsvTemplate('out')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-3.5 rounded-xl transition-all text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-download"></i> Template CSV
+                            </button>
+                            <button type="button" onclick="document.getElementById('out-csv-file').click()" class="bg-rose-600 hover:bg-rose-700 text-white font-medium py-2 px-4 rounded-xl shadow-sm transition-all text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-arrow-up"></i> Upload CSV
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -416,6 +454,25 @@
                             <input type="text" id="so-ket" placeholder="Contoh: Opname bulanan" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
                         </div>
                     </form>
+
+                    <!-- Upload Massal SO Fisik (CSV) -->
+                    <div class="mt-6 pt-5 border-t border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-file-csv text-blue-600"></i> Upload Stock Opname (SO) Fisik Sekaligus (CSV)
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Format kolom: <span class="font-semibold text-slate-700">Tanggal, PLU, Qty</span> (opsional kolom ke-4: <span class="font-semibold text-slate-700">Keterangan</span>).</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input type="file" id="so-csv-file" accept=".csv,text/csv" onchange="handleTransactionCsvUpload(event, 'so')" class="hidden">
+                            <button type="button" onclick="downloadCsvTemplate('so')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-3.5 rounded-xl transition-all text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-download"></i> Template CSV
+                            </button>
+                            <button type="button" onclick="document.getElementById('so-csv-file').click()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-xl shadow-sm transition-all text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-arrow-up"></i> Upload CSV
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1525,7 +1582,7 @@
             const latestSO = new Map();
             window.db.so.forEach(s => {
                 const prev = latestSO.get(s.plu);
-                if (!prev || new Date(s.dateTimeRaw) > new Date(prev.dateTimeRaw)) latestSO.set(s.plu, s);
+                if (!prev || new Date(s.dateTimeRaw) >= new Date(prev.dateTimeRaw)) latestSO.set(s.plu, s);
             });
 
             return window.db.master.map(master => {
@@ -1971,6 +2028,243 @@
             saveCloudBatch('master', toAdd, item => item.plu);
             renderMaster();
             window.showAlert(`${toAdd.length} barang berhasil ditambahkan dari CSV${skipped.length ? ` (${skipped.length} baris dilewati)` : ''}.`);
+        }
+
+        // ================= UPLOAD TRANSAKSI IN / OUT / SO FISIK (CSV) =================
+        function triggerCsvDownload(fileName, content) {
+            const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        window.downloadCsvTemplate = function(type) {
+            const d = new Date();
+            const p = n => String(n).padStart(2, '0');
+            const today = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+            const samplePlu1 = (window.db.master[0] && window.db.master[0].plu) || 'PLU001';
+            const samplePlu2 = (window.db.master[1] && window.db.master[1].plu) || 'PLU002';
+
+            if (type === 'in') {
+                triggerCsvDownload('Template_Menu_In.csv', `Tanggal,PLU,Qty,Keterangan\r\n${today},${samplePlu1},10,Restock supplier\r\n${today},${samplePlu2},5,Barang masuk\r\n`);
+            } else if (type === 'out') {
+                const sampleBagian = (window.db.bagian[0] && window.db.bagian[0].nama) || 'Divisi Produksi';
+                triggerCsvDownload('Template_Menu_Out.csv', `Tanggal,PLU,Qty,Bagian,Keterangan\r\n${today},${samplePlu1},2,${sampleBagian},Pengeluaran divisi\r\n${today},${samplePlu2},1,${sampleBagian},Permintaan ATK\r\n`);
+            } else if (type === 'so') {
+                triggerCsvDownload('Template_Menu_SO_Fisik.csv', `Tanggal,PLU,Qty,Keterangan\r\n${today},${samplePlu1},8,Opname bulanan\r\n${today},${samplePlu2},4,Opname bulanan\r\n`);
+            }
+        }
+
+        // Mendukung format tanggal: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY (dengan atau tanpa jam HH:mm / HH.mm / AM-PM)
+        function parseCsvDateTime(raw) {
+            const s = String(raw || '').trim();
+            if (!s) return null;
+
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            let year, month, day, hours = now.getHours(), minutes = now.getMinutes();
+
+            const applyTime = (hRaw, mRaw, ampm) => {
+                if (hRaw === undefined) return;
+                hours = parseInt(hRaw, 10);
+                minutes = parseInt(mRaw, 10);
+                if (ampm) {
+                    const up = ampm.toUpperCase();
+                    if (up === 'PM' && hours < 12) hours += 12;
+                    if (up === 'AM' && hours === 12) hours = 0;
+                }
+            };
+
+            // 1) YYYY-MM-DD atau YYYY/MM/DD [THH:mm[:ss] [AM/PM]]
+            let m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})(?:[T\s]+(\d{1,2})[:.](\d{1,2})(?:[:.]\d{1,2})?(?:\s*(AM|PM))?)?$/i);
+            if (m) {
+                year = parseInt(m[1], 10);
+                month = parseInt(m[2], 10);
+                day = parseInt(m[3], 10);
+                applyTime(m[4], m[5], m[6]);
+            } else {
+                // 2) DD/MM/YYYY atau DD-MM-YYYY [HH:mm[:ss] [AM/PM]]
+                m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})(?:[T\s]+(\d{1,2})[:.](\d{1,2})(?:[:.]\d{1,2})?(?:\s*(AM|PM))?)?$/i);
+                if (m) {
+                    let d1 = parseInt(m[1], 10);
+                    let m1 = parseInt(m[2], 10);
+                    let y1 = parseInt(m[3], 10);
+                    if (y1 < 100) y1 += 2000;
+                    // Jika bagian kedua > 12 (format MM/DD/YYYY dari Excel US), tukar
+                    if (m1 > 12 && d1 <= 12) { const tmp = d1; d1 = m1; m1 = tmp; }
+                    day = d1; month = m1; year = y1;
+                    applyTime(m[4], m[5], m[6]);
+                } else {
+                    const parsed = new Date(s);
+                    if (isNaN(parsed.getTime())) return null;
+                    year = parsed.getFullYear();
+                    month = parsed.getMonth() + 1;
+                    day = parsed.getDate();
+                    if (s.includes(':')) { hours = parsed.getHours(); minutes = parsed.getMinutes(); }
+                }
+            }
+
+            if (month < 1 || month > 12 || day < 1 || day > 31 || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+                return null;
+            }
+            const dateObj = new Date(year, month - 1, day, hours, minutes);
+            if (isNaN(dateObj.getTime()) || dateObj.getMonth() !== month - 1 || dateObj.getDate() !== day) {
+                return null;
+            }
+
+            const dateTimeRaw = `${year}-${pad(month)}-${pad(day)}T${pad(hours)}:${pad(minutes)}`;
+            const dateTime = dateObj.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+            return { dateTimeRaw, dateTime };
+        }
+
+        window.handleTransactionCsvUpload = async function(e, type) {
+            const input = e.target;
+            const file = input.files && input.files[0];
+            input.value = '';
+            if (!file) return;
+
+            if (!/\.csv$/i.test(file.name)) {
+                window.showAlert('File harus berformat .csv (kolom: Tanggal, PLU, Qty).', 'error');
+                return;
+            }
+
+            if (window.db.master.length === 0) {
+                window.showAlert('Master Barang masih kosong. Tambahkan atau upload Master Barang terlebih dahulu.', 'error');
+                return;
+            }
+
+            let rows;
+            try {
+                rows = parseCSV(await readCsvText(file));
+            } catch (err) {
+                console.error('CSV read error:', err);
+                window.showAlert('File CSV tidak dapat dibaca.', 'error');
+                return;
+            }
+            if (rows.length === 0) {
+                window.showAlert('File CSV kosong.', 'error');
+                return;
+            }
+
+            // Deteksi baris judul (Tanggal, PLU, Qty)
+            const first = rows[0].map(c => c.trim().toLowerCase());
+            const h0 = (first[0] || '').replace(/[^a-z0-9 ]/g, '').trim();
+            const h1 = (first[1] || '').replace(/[^a-z0-9 ]/g, '').trim();
+            const h2 = (first[2] || '').replace(/[^a-z0-9 ]/g, '').trim();
+            const hasHeader = /^(tanggal|tgl|date|waktu|tanggal waktu|tanggal dan waktu|datetime)$/.test(h0)
+                || /^(plu|kode|kode plu|kode barang|no plu)$/.test(h1)
+                || /^(qty|jumlah|kuantitas|qty fisik|fisik|stok fisik)$/.test(h2);
+            const startLine = hasHeader ? 2 : 1;
+            const dataRows = hasHeader ? rows.slice(1) : rows;
+
+            const masterByLower = new Map(window.db.master.map(m => [String(m.plu || '').toLowerCase(), m.plu]));
+            const bagianByLower = new Map(window.db.bagian.map(b => [String(b.nama || '').toLowerCase(), b.nama]));
+            const inMap = type === 'so' ? sumQtyByPlu(window.db.in) : null;
+            const outMap = type === 'so' ? sumQtyByPlu(window.db.out) : null;
+
+            const toAdd = [];
+            const skipped = [];
+            const baseTs = Date.now();
+
+            dataRows.forEach((r, idx) => {
+                const line = idx + startLine;
+                const dateRaw = (r[0] || '').trim();
+                const pluRaw = (r[1] || '').trim();
+                const qtyRaw = (r[2] || '').trim();
+
+                if (!dateRaw || !pluRaw || qtyRaw === '') {
+                    skipped.push(`Baris ${line}: Tanggal / PLU / Qty kosong`);
+                    return;
+                }
+
+                const parsedDate = parseCsvDateTime(dateRaw);
+                if (!parsedDate) {
+                    skipped.push(`Baris ${line}: Format tanggal "${dateRaw}" tidak valid (gunakan YYYY-MM-DD atau DD/MM/YYYY)`);
+                    return;
+                }
+
+                const canonicalPlu = masterByLower.get(pluRaw.toLowerCase());
+                if (!canonicalPlu) {
+                    skipped.push(`Baris ${line}: PLU "${pluRaw}" belum terdaftar di Master Barang`);
+                    return;
+                }
+
+                const qtyVal = Number(qtyRaw.replace(',', '.'));
+                const minQty = type === 'so' ? 0 : 1;
+                if (!Number.isFinite(qtyVal) || !Number.isInteger(qtyVal) || qtyVal < minQty) {
+                    skipped.push(`Baris ${line}: Qty "${qtyRaw}" harus bilangan bulat minimal ${minQty}`);
+                    return;
+                }
+
+                const id = `${baseTs}_${idx}_${Math.random().toString(36).substring(2, 7)}`;
+
+                if (type === 'so') {
+                    const keterangan = (r[3] || '').trim() || 'Upload CSV';
+                    const qtySistem = (inMap.get(canonicalPlu) || 0) - (outMap.get(canonicalPlu) || 0);
+                    const selisih = qtyVal - qtySistem;
+                    toAdd.push({
+                        id,
+                        plu: canonicalPlu,
+                        dateTimeRaw: parsedDate.dateTimeRaw,
+                        dateTime: parsedDate.dateTime,
+                        qtySistem,
+                        qtyFisik: qtyVal,
+                        selisih,
+                        keterangan
+                    });
+                } else if (type === 'out') {
+                    const bagianRaw = (r[3] || '').trim();
+                    const bagian = bagianRaw ? (bagianByLower.get(bagianRaw.toLowerCase()) || bagianRaw) : '-';
+                    const keterangan = (r[4] || '').trim() || 'Upload CSV';
+                    toAdd.push({
+                        id,
+                        plu: canonicalPlu,
+                        bagian,
+                        dateTimeRaw: parsedDate.dateTimeRaw,
+                        dateTime: parsedDate.dateTime,
+                        qty: qtyVal,
+                        keterangan
+                    });
+                } else {
+                    const keterangan = (r[3] || '').trim() || 'Upload CSV';
+                    toAdd.push({
+                        id,
+                        plu: canonicalPlu,
+                        bagian: '-',
+                        dateTimeRaw: parsedDate.dateTimeRaw,
+                        dateTime: parsedDate.dateTime,
+                        qty: qtyVal,
+                        keterangan
+                    });
+                }
+            });
+
+            if (toAdd.length === 0) {
+                console.warn(`Upload CSV ${type.toUpperCase()} dilewati:`, skipped);
+                const firstReason = skipped[0] ? ` Contoh: ${skipped[0]}.` : '';
+                window.showAlert(`Tidak ada data yang bisa diupload (${skipped.length} baris dilewati).${firstReason}`, 'error');
+                return;
+            }
+
+            const labelMap = { in: 'Barang Masuk (IN)', out: 'Barang Keluar (OUT)', so: 'Stock Opname (SO) Fisik' };
+            let msg = `File: ${file.name}\nMenu: ${labelMap[type]}\n\nData valid yang akan ditambahkan: ${toAdd.length} baris`;
+            if (skipped.length > 0) {
+                msg += `\nBaris dilewati: ${skipped.length}\n- ` + skipped.slice(0, 8).join('\n- ');
+                if (skipped.length > 8) msg += `\n- ...dan ${skipped.length - 8} baris lainnya`;
+            }
+            msg += '\n\nLanjutkan upload?';
+            if (!confirm(msg)) return;
+
+            window.db[type].push(...toAdd);
+            saveCloudBatch(type, toAdd, item => item.id);
+            if (type === 'so') renderSO();
+            else renderTransactions(type);
+            window.showAlert(`${toAdd.length} data ${labelMap[type]} berhasil diupload dari CSV${skipped.length ? ` (${skipped.length} baris dilewati)` : ''}.`);
         }
 
         window.onload = function() {
