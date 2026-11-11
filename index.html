@@ -461,7 +461,7 @@
                             <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
                                 <i class="fa-solid fa-file-csv text-blue-600"></i> Upload Stock Opname (SO) Fisik Sekaligus (CSV)
                             </h3>
-                            <p class="text-xs text-slate-500 mt-0.5">Format kolom: <span class="font-semibold text-slate-700">Tanggal, PLU, Qty</span> (opsional kolom ke-4: <span class="font-semibold text-slate-700">Keterangan</span>).</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Format kolom: <span class="font-semibold text-slate-700">Tanggal, PLU, Qty</span> (opsional kolom ke-4: <span class="font-semibold text-slate-700">Keterangan</span>). <span class="text-blue-600 font-medium">Upload file terbaru akan me-refresh (menggantikan) data SO Fisik sebelumnya.</span></p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
                             <input type="file" id="so-csv-file" accept=".csv,text/csv" onchange="handleTransactionCsvUpload(event, 'so')" class="hidden">
@@ -1443,7 +1443,7 @@
                 timeStyle: 'short'
             });
 
-            const id = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 7);
+            const id = plu;
             const soItem = {
                 id,
                 plu,
@@ -1455,13 +1455,16 @@
                 keterangan
             };
 
+            const oldDuplicates = window.db.so.filter(s => s.plu === plu && String(s.id) !== String(id));
+            window.db.so = window.db.so.filter(s => s.plu !== plu);
             window.db.so.push(soItem);
+            oldDuplicates.forEach(old => window.deleteCloudData('so', old.id));
             window.saveCloudData('so', id, soItem);
             document.getElementById('form-so').reset();
             setDefaultDateTime('so');
             populateDropdownsSO();
             renderSO();
-            window.showAlert('Data Stock Opname Fisik berhasil disimpan.');
+            window.showAlert('Data Stock Opname Fisik berhasil disimpan / diperbarui.');
         }
 
         window.deleteTransaction = function(type, id) {
@@ -1486,11 +1489,16 @@
                 return;
             }
 
+            const inMap = sumQtyByPlu(window.db.in);
+            const outMap = sumQtyByPlu(window.db.out);
             const sorted = [...window.db.so].sort((a, b) => new Date(b.dateTimeRaw) - new Date(a.dateTimeRaw));
 
             sorted.forEach(item => {
                 const masterItem = window.db.master.find(m => m.plu === item.plu);
                 const desc = masterItem ? masterItem.desc : '(Barang Dihapus)';
+                const qtySistem = (inMap.get(item.plu) || 0) - (outMap.get(item.plu) || 0);
+                const qtyFisik = num(item.qtyFisik);
+                const selisih = qtyFisik - qtySistem;
 
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition-colors";
@@ -1498,9 +1506,9 @@
                     <td class="p-4 text-slate-600 text-xs font-medium">${esc(item.dateTime)}</td>
                     <td class="p-4 font-semibold text-slate-700">${esc(item.plu)}</td>
                     <td class="p-4 text-slate-600">${esc(desc)}</td>
-                    <td class="p-4 text-right font-semibold text-slate-700">${item.qtySistem}</td>
-                    <td class="p-4 text-right font-bold text-blue-600">${item.qtyFisik}</td>
-                    <td class="p-4 text-right font-bold ${item.selisih < 0 ? 'text-rose-600' : (item.selisih > 0 ? 'text-emerald-600' : 'text-slate-600')}">${item.selisih > 0 ? '+' + item.selisih : item.selisih}</td>
+                    <td class="p-4 text-right font-semibold text-slate-700">${qtySistem}</td>
+                    <td class="p-4 text-right font-bold text-blue-600">${qtyFisik}</td>
+                    <td class="p-4 text-right font-bold ${selisih < 0 ? 'text-rose-600' : (selisih > 0 ? 'text-emerald-600' : 'text-slate-600')}">${selisih > 0 ? '+' + selisih : selisih}</td>
                     <td class="p-4 text-slate-500 text-xs">${esc(item.keterangan)}</td>
                     <td class="p-4 text-center">
                         <button onclick="deleteTransaction('so', ${jsArg(item.id)})" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all font-bold text-xs" title="Hapus">
@@ -1868,11 +1876,18 @@
                     rows: [...window.db.out].sort(byDateDesc).map(o => [o.dateTime || o.dateTimeRaw || '', String(o.plu ?? ''), descOf(o.plu), o.bagian || '-', num(o.qty), o.keterangan || '-'])
                 }];
             } else if (type === 'so') {
+                const inMap = sumQtyByPlu(window.db.in);
+                const outMap = sumQtyByPlu(window.db.out);
                 fileBase = 'Menu_SO_Fisik';
                 sheets = [{
                     name: 'Stock Opname Fisik',
                     headers: ['Tanggal & Waktu', 'PLU', 'Desc (Nama Barang)', 'Qty Sistem', 'Qty Fisik', 'Selisih', 'Keterangan'],
-                    rows: [...window.db.so].sort(byDateDesc).map(s => [s.dateTime || s.dateTimeRaw || '', String(s.plu ?? ''), descOf(s.plu), num(s.qtySistem), num(s.qtyFisik), num(s.selisih), s.keterangan || '-'])
+                    rows: [...window.db.so].sort(byDateDesc).map(s => {
+                        const qtySistem = (inMap.get(s.plu) || 0) - (outMap.get(s.plu) || 0);
+                        const qtyFisik = num(s.qtyFisik);
+                        const selisih = qtyFisik - qtySistem;
+                        return [s.dateTime || s.dateTimeRaw || '', String(s.plu ?? ''), descOf(s.plu), qtySistem, qtyFisik, selisih, s.keterangan || '-'];
+                    })
                 }];
             } else if (type === 'view') {
                 fileBase = 'Stock_View';
@@ -1989,6 +2004,51 @@
             } catch (e) {
                 console.error('Batch save error:', e);
                 window.showAlert('Gagal menyimpan hasil upload ke database online: ' + (e.code || e.message), 'error');
+            } finally {
+                pendingByCol[colName] = false;
+                updateSyncBadge();
+            }
+        }
+
+        async function replaceCloudCollection(colName, oldItems, newItems, idOf) {
+            if (currentLoggedUsername) {
+                localStorage.setItem(`app_${currentLoggedUsername}_${colName}`, JSON.stringify(window.db[colName]));
+            }
+            if (!cloudMode || !firestoreDb || !currentUser) return;
+
+            pendingByCol[colName] = true;
+            updateSyncBadge();
+            try {
+                const newIds = new Set(newItems.map(item => String(idOf(item))));
+                const ops = [];
+                oldItems.forEach(oldItem => {
+                    const oldId = String(idOf(oldItem));
+                    if (oldId && !newIds.has(oldId)) {
+                        ops.push({ type: 'delete', id: oldId });
+                    }
+                });
+                newItems.forEach(item => {
+                    const newId = String(idOf(item));
+                    if (newId) {
+                        ops.push({ type: 'set', id: newId, data: stripUndefined(item) });
+                    }
+                });
+
+                for (let i = 0; i < ops.length; i += 400) {
+                    const batch = writeBatch(firestoreDb);
+                    ops.slice(i, i + 400).forEach(op => {
+                        const ref = doc(firestoreDb, 'artifacts', appId, 'users', currentLoggedUsername, colName, op.id);
+                        if (op.type === 'delete') {
+                            batch.delete(ref);
+                        } else {
+                            batch.set(ref, op.data);
+                        }
+                    });
+                    await batch.commit();
+                }
+            } catch (e) {
+                console.error('Batch replace error:', e);
+                window.showAlert('Gagal memperbarui hasil upload ke database online: ' + (e.code || e.message), 'error');
             } finally {
                 pendingByCol[colName] = false;
                 updateSyncBadge();
@@ -2207,6 +2267,7 @@
             const outMap = type === 'so' ? sumQtyByPlu(window.db.out) : null;
 
             const toAdd = [];
+            const soByPlu = new Map();
             const skipped = [];
             const baseTs = Date.now();
 
@@ -2240,13 +2301,13 @@
                     return;
                 }
 
-                const id = `${baseTs}_${idx}_${Math.random().toString(36).substring(2, 7)}`;
+                const id = type === 'so' ? canonicalPlu : `${baseTs}_${idx}_${Math.random().toString(36).substring(2, 7)}`;
 
                 if (type === 'so') {
                     const keterangan = (r[3] || '').trim() || 'Upload CSV';
                     const qtySistem = (inMap.get(canonicalPlu) || 0) - (outMap.get(canonicalPlu) || 0);
                     const selisih = qtyVal - qtySistem;
-                    toAdd.push({
+                    soByPlu.set(canonicalPlu, {
                         id,
                         plu: canonicalPlu,
                         dateTimeRaw: parsedDate.dateTimeRaw,
@@ -2283,7 +2344,9 @@
                 }
             });
 
-            if (toAdd.length === 0) {
+            const finalItems = type === 'so' ? Array.from(soByPlu.values()) : toAdd;
+
+            if (finalItems.length === 0) {
                 console.warn(`Upload CSV ${type.toUpperCase()} dilewati:`, skipped);
                 const firstReason = skipped[0] ? ` Contoh: ${skipped[0]}.` : '';
                 window.showAlert(`Tidak ada data yang bisa diupload (${skipped.length} baris dilewati).${firstReason}`, 'error');
@@ -2291,7 +2354,12 @@
             }
 
             const labelMap = { in: 'Barang Masuk (IN)', out: 'Barang Keluar (OUT)', so: 'Stock Opname (SO) Fisik' };
-            let msg = `File: ${file.name}\nMenu: ${labelMap[type]}\n\nData valid yang akan ditambahkan: ${toAdd.length} baris`;
+            let msg = `File: ${file.name}\nMenu: ${labelMap[type]}\n\n`;
+            if (type === 'so') {
+                msg += `Data SO Fisik yang akan di-refresh / diperbarui: ${finalItems.length} barang (menggantikan data SO sebelumnya)`;
+            } else {
+                msg += `Data valid yang akan ditambahkan: ${finalItems.length} baris`;
+            }
             if (skipped.length > 0) {
                 msg += `\nBaris dilewati: ${skipped.length}\n- ` + skipped.slice(0, 8).join('\n- ');
                 if (skipped.length > 8) msg += `\n- ...dan ${skipped.length - 8} baris lainnya`;
@@ -2299,11 +2367,18 @@
             msg += '\n\nLanjutkan upload?';
             if (!confirm(msg)) return;
 
-            window.db[type].push(...toAdd);
-            saveCloudBatch(type, toAdd, item => item.id);
-            if (type === 'so') renderSO();
-            else renderTransactions(type);
-            window.showAlert(`${toAdd.length} data ${labelMap[type]} berhasil diupload dari CSV${skipped.length ? ` (${skipped.length} baris dilewati)` : ''}.`);
+            if (type === 'so') {
+                const oldSoItems = [...window.db.so];
+                window.db.so = finalItems;
+                replaceCloudCollection('so', oldSoItems, finalItems, item => item.id);
+                renderSO();
+                window.showAlert(`Data ${labelMap[type]} berhasil di-refresh dengan ${finalItems.length} barang dari file terbaru${skipped.length ? ` (${skipped.length} baris dilewati)` : ''}.`);
+            } else {
+                window.db[type].push(...finalItems);
+                saveCloudBatch(type, finalItems, item => item.id);
+                renderTransactions(type);
+                window.showAlert(`${finalItems.length} data ${labelMap[type]} berhasil diupload dari CSV${skipped.length ? ` (${skipped.length} baris dilewati)` : ''}.`);
+            }
         }
 
         window.onload = function() {
