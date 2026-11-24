@@ -263,26 +263,26 @@
                         <i class="fa-solid fa-arrow-down text-emerald-600"></i> Input Transaksi Barang Masuk (IN)
                     </h2>
                     <form id="form-in" onsubmit="saveTransaction(event, 'in')" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Pilih PLU / Barang</label>
-                            <select id="in-plu" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Pilih PLU / Barang <span class="text-rose-500">*</span></label>
+                            <select id="in-plu" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white">
                                 <option value="">-- Pilih Barang --</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Tanggal & Waktu</label>
-                            <input type="datetime-local" id="in-date" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Tanggal & Waktu <span class="text-rose-500">*</span></label>
+                            <input type="datetime-local" id="in-date" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Qty (Jumlah)</label>
-                            <input type="number" min="1" id="in-qty" required placeholder="0" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Qty (Jumlah) <span class="text-rose-500">*</span></label>
+                            <input type="number" min="1" id="in-qty" required placeholder="0" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                         </div>
                         <div class="md:col-span-3">
-                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Keterangan</label>
-                            <input type="text" id="in-ket" placeholder="Contoh: Restock dari supplier" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Keterangan <span class="text-rose-500">*</span></label>
+                            <input type="text" id="in-ket" required placeholder="Contoh: Restock dari supplier (wajib diisi)" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                         </div>
                         <div>
-                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-xl shadow transition-all text-sm flex items-center justify-center gap-2">
+                            <button type="submit" id="btn-save-in" disabled class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-xl shadow transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-600">
                                 <i class="fa-solid fa-save"></i> Save In
                             </button>
                         </div>
@@ -343,32 +343,47 @@
                         <i class="fa-solid fa-arrow-up text-rose-600"></i> Input Transaksi Barang Keluar (OUT)
                     </h2>
                     <form id="form-out" onsubmit="saveTransaction(event, 'out')" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Pilih PLU / Barang</label>
-                            <select id="out-plu" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
-                                <option value="">-- Pilih Barang --</option>
-                            </select>
+                        <div class="relative" id="out-barang-container">
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1 flex items-center justify-between">
+                                <span>Ketik / Pilih Barang <span class="text-rose-500">*</span></span>
+                                <span id="out-barang-badge" class="text-[11px] font-medium text-slate-400"></span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" id="out-barang-input" autocomplete="off" required placeholder="Ketik nama barang / PLU..." class="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm bg-white">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-search text-xs"></i>
+                                </span>
+                                <button type="button" id="out-barang-clear" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-xs" title="Hapus pilihan">
+                                    <i class="fa-solid fa-circle-xmark text-sm"></i>
+                                </button>
+                            </div>
+                            <!-- Hidden input untuk menyimpan PLU yang valid dari master -->
+                            <input type="hidden" id="out-plu" required>
+
+                            <!-- Dropdown popup hasil pencarian / daftar barang dari Master -->
+                            <div id="out-barang-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto z-30 divide-y divide-slate-100">
+                            </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Bagian</label>
-                            <select id="out-bagian" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Bagian <span class="text-rose-500">*</span></label>
+                            <select id="out-bagian" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm bg-white">
                                 <option value="">-- Pilih Bagian --</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Tanggal & Waktu</label>
-                            <input type="datetime-local" id="out-date" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Tanggal & Waktu <span class="text-rose-500">*</span></label>
+                            <input type="datetime-local" id="out-date" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Qty (Jumlah)</label>
-                            <input type="number" min="1" id="out-qty" required placeholder="0" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Qty (Jumlah) <span class="text-rose-500">*</span></label>
+                            <input type="number" min="1" id="out-qty" required placeholder="0" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm">
                         </div>
                         <div class="md:col-span-3">
-                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Keterangan</label>
-                            <input type="text" id="out-ket" placeholder="Contoh: Pengeluaran divisi" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Keterangan <span class="text-rose-500">*</span></label>
+                            <input type="text" id="out-ket" required placeholder="Contoh: Pengeluaran divisi (wajib diisi)" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm">
                         </div>
                         <div>
-                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium py-2.5 px-4 rounded-xl shadow transition-all text-sm flex items-center justify-center gap-2">
+                            <button type="submit" id="btn-save-out" disabled class="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium py-2.5 px-4 rounded-xl shadow transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-rose-600">
                                 <i class="fa-solid fa-save"></i> Save Out
                             </button>
                         </div>
@@ -1113,6 +1128,7 @@
                 populateDropdowns();
                 setDefaultDateTime(tabId);
                 renderTransactions(tabId);
+                if (typeof updateSaveButtonState === 'function') updateSaveButtonState(tabId);
             } else if (tabId === 'so') {
                 populateDropdownsSO();
                 setDefaultDateTime('so');
@@ -1189,6 +1205,7 @@
                 `;
                 tbody.appendChild(tr);
             });
+            if (typeof populateDropdowns === 'function') populateDropdowns();
         }
 
         window.saveBagian = function(e) {
@@ -1243,6 +1260,7 @@
                 `;
                 tbody.appendChild(tr);
             });
+            if (typeof populateDropdowns === 'function') populateDropdowns();
         }
 
         window.saveNewUser = function(e) {
@@ -1332,21 +1350,309 @@
             });
         }
 
-        function populateDropdowns() {
-            ['in', 'out'].forEach(type => {
-                const select = document.getElementById(`${type}-plu`);
-                if (select) {
-                    const currentVal = select.value;
-                    select.innerHTML = '<option value="">-- Pilih Barang --</option>';
-                    window.db.master.forEach(item => {
-                        const opt = document.createElement('option');
-                        opt.value = item.plu;
-                        opt.textContent = `${item.plu} - ${item.desc}`;
-                        select.appendChild(opt);
-                    });
-                    select.value = currentVal;
+        // ================= MENU OUT: KETIK & CARI NAMA BARANG DARI MASTER =================
+        let outActiveIndex = -1;
+
+        function renderOutDropdown(filterText = '') {
+            const dropdown = document.getElementById('out-barang-dropdown');
+            if (!dropdown) return;
+
+            const q = (filterText || '').trim().toLowerCase();
+            const list = window.db.master || [];
+
+            if (list.length === 0) {
+                dropdown.innerHTML = '<div class="p-4 text-xs text-slate-400 text-center italic"><i class="fa-solid fa-box-open mr-1"></i> Belum ada data Master Barang. Silakan tambah barang di menu Master terlebih dahulu.</div>';
+                outActiveIndex = -1;
+                return;
+            }
+
+            const matches = list.filter(item => {
+                if (!q) return true;
+                const desc = String(item.desc || '').toLowerCase();
+                const plu = String(item.plu || '').toLowerCase();
+                return desc.includes(q) || plu.includes(q);
+            });
+
+            if (matches.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-rose-500 text-center font-medium bg-rose-50/50"><i class="fa-solid fa-circle-exclamation mr-1"></i> Tidak ada barang di master yang cocok dengan "<strong>${esc(filterText)}</strong>"</div>`;
+                outActiveIndex = -1;
+                return;
+            }
+
+            outActiveIndex = -1;
+            dropdown.innerHTML = matches.map((item, idx) => `
+                <div class="out-barang-item px-3.5 py-2.5 hover:bg-rose-50 cursor-pointer flex items-center justify-between gap-2 border-b border-slate-100 last:border-0 transition-colors" data-plu="${esc(item.plu)}" data-index="${idx}">
+                    <div class="min-w-0 flex-1">
+                        <div class="font-semibold text-slate-800 text-sm truncate">${esc(item.desc)}</div>
+                        <div class="text-[11px] text-slate-400 font-mono mt-0.5"><i class="fa-solid fa-barcode text-[10px] mr-1 text-slate-400"></i>PLU: <span class="text-slate-600 font-semibold">${esc(item.plu)}</span></div>
+                    </div>
+                    <span class="text-xs text-rose-600 font-semibold flex items-center gap-1 shrink-0 bg-rose-50/80 px-2 py-1 rounded-lg border border-rose-100">
+                        <i class="fa-solid fa-check text-[10px]"></i> Pilih
+                    </span>
+                </div>
+            `).join('');
+
+            dropdown.querySelectorAll('.out-barang-item').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const plu = el.getAttribute('data-plu');
+                    selectOutBarang(plu);
+                });
+            });
+        }
+
+        function selectOutBarang(plu) {
+            const item = (window.db.master || []).find(m => String(m.plu) === String(plu));
+            const input = document.getElementById('out-barang-input');
+            const hidden = document.getElementById('out-plu');
+            const badge = document.getElementById('out-barang-badge');
+            const clearBtn = document.getElementById('out-barang-clear');
+            const dropdown = document.getElementById('out-barang-dropdown');
+
+            if (item) {
+                if (input) {
+                    input.value = item.desc;
+                    input.classList.remove('border-rose-400');
+                    input.classList.add('border-slate-300');
+                }
+                if (hidden) hidden.value = item.plu;
+                if (badge) {
+                    badge.innerHTML = `<span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md font-mono text-[10px] font-bold flex items-center gap-1"><i class="fa-solid fa-circle-check text-emerald-600"></i> PLU: ${esc(item.plu)}</span>`;
+                }
+                if (clearBtn) clearBtn.classList.remove('hidden');
+            } else {
+                if (hidden) hidden.value = '';
+                if (badge) badge.innerHTML = '';
+                if (clearBtn) clearBtn.classList.add('hidden');
+            }
+            if (dropdown) dropdown.classList.add('hidden');
+            outActiveIndex = -1;
+            updateSaveButtonState('out');
+        }
+
+        window.clearOutBarang = function() {
+            const input = document.getElementById('out-barang-input');
+            const hidden = document.getElementById('out-plu');
+            const badge = document.getElementById('out-barang-badge');
+            const clearBtn = document.getElementById('out-barang-clear');
+            const dropdown = document.getElementById('out-barang-dropdown');
+
+            if (input) {
+                input.value = '';
+                input.classList.remove('border-rose-400');
+                input.classList.add('border-slate-300');
+            }
+            if (hidden) hidden.value = '';
+            if (badge) badge.innerHTML = '';
+            if (clearBtn) clearBtn.classList.add('hidden');
+            if (dropdown) dropdown.classList.add('hidden');
+            outActiveIndex = -1;
+            updateSaveButtonState('out');
+        };
+
+        function syncOutBarangOnMasterChange() {
+            const hidden = document.getElementById('out-plu');
+            if (hidden && hidden.value) {
+                const item = (window.db.master || []).find(m => String(m.plu) === String(hidden.value));
+                if (item) {
+                    selectOutBarang(item.plu);
+                } else {
+                    window.clearOutBarang();
+                }
+            }
+        }
+
+        function initOutBarangAutocomplete() {
+            const input = document.getElementById('out-barang-input');
+            const dropdown = document.getElementById('out-barang-dropdown');
+            const container = document.getElementById('out-barang-container');
+            const clearBtn = document.getElementById('out-barang-clear');
+            const hidden = document.getElementById('out-plu');
+            const badge = document.getElementById('out-barang-badge');
+
+            if (!input || !dropdown) return;
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.clearOutBarang();
+                    input.focus();
+                });
+            }
+
+            input.addEventListener('focus', () => {
+                renderOutDropdown(input.value.trim());
+                dropdown.classList.remove('hidden');
+            });
+
+            input.addEventListener('click', () => {
+                renderOutDropdown(input.value.trim());
+                dropdown.classList.remove('hidden');
+            });
+
+            input.addEventListener('input', () => {
+                const val = input.value.trim();
+                if (!val) {
+                    window.clearOutBarang();
+                    renderOutDropdown('');
+                    dropdown.classList.remove('hidden');
+                    return;
+                }
+                if (clearBtn) clearBtn.classList.remove('hidden');
+
+                const exact = (window.db.master || []).find(m => 
+                    String(m.desc || '').trim().toLowerCase() === val.toLowerCase() ||
+                    String(m.plu || '').trim().toLowerCase() === val.toLowerCase() ||
+                    `${m.plu} - ${m.desc}`.toLowerCase() === val.toLowerCase()
+                );
+
+                if (exact) {
+                    hidden.value = exact.plu;
+                    badge.innerHTML = `<span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md font-mono text-[10px] font-bold flex items-center gap-1"><i class="fa-solid fa-circle-check text-emerald-600"></i> PLU: ${esc(exact.plu)}</span>`;
+                    input.classList.remove('border-rose-400');
+                    input.classList.add('border-slate-300');
+                } else {
+                    hidden.value = '';
+                    badge.innerHTML = `<span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md text-[10px] font-medium">Ketik / pilih dari list</span>`;
+                }
+
+                renderOutDropdown(val);
+                dropdown.classList.remove('hidden');
+                updateSaveButtonState('out');
+            });
+
+            input.addEventListener('keydown', (e) => {
+                const items = dropdown.querySelectorAll('.out-barang-item');
+                if (e.key === 'ArrowDown') {
+                    if (dropdown.classList.contains('hidden')) {
+                        renderOutDropdown(input.value.trim());
+                        dropdown.classList.remove('hidden');
+                        return;
+                    }
+                    e.preventDefault();
+                    if (items.length > 0) {
+                        outActiveIndex = (outActiveIndex + 1) % items.length;
+                        highlightItem(items, outActiveIndex);
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (items.length > 0) {
+                        outActiveIndex = (outActiveIndex - 1 + items.length) % items.length;
+                        highlightItem(items, outActiveIndex);
+                    }
+                } else if (e.key === 'Enter') {
+                    if (!dropdown.classList.contains('hidden') && items.length > 0) {
+                        e.preventDefault();
+                        const target = outActiveIndex >= 0 && outActiveIndex < items.length ? items[outActiveIndex] : items[0];
+                        if (target) {
+                            const plu = target.getAttribute('data-plu');
+                            selectOutBarang(plu);
+                        }
+                    }
+                } else if (e.key === 'Escape') {
+                    dropdown.classList.add('hidden');
+                    outActiveIndex = -1;
                 }
             });
+
+            function highlightItem(items, idx) {
+                items.forEach((item, i) => {
+                    if (i === idx) {
+                        item.classList.add('bg-rose-100');
+                        item.scrollIntoView({ block: 'nearest' });
+                    } else {
+                        item.classList.remove('bg-rose-100');
+                    }
+                });
+            }
+
+            document.addEventListener('click', (e) => {
+                if (container && !container.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                    outActiveIndex = -1;
+                    const val = input.value.trim();
+                    if (val && !hidden.value) {
+                        const exact = (window.db.master || []).find(m => 
+                            String(m.desc || '').trim().toLowerCase() === val.toLowerCase() ||
+                            String(m.plu || '').trim().toLowerCase() === val.toLowerCase()
+                        );
+                        if (exact) {
+                            selectOutBarang(exact.plu);
+                        } else {
+                            badge.innerHTML = `<span class="text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md text-[10px] font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Tidak ada di master!</span>`;
+                            input.classList.add('border-rose-400');
+                            updateSaveButtonState('out');
+                        }
+                    }
+                }
+            });
+        }
+
+        // ================= VALIDASI FORM TRANSAKSI IN & OUT =================
+        function updateSaveButtonState(type) {
+            if (type === 'in') {
+                const plu = (document.getElementById('in-plu')?.value || '').trim();
+                const date = (document.getElementById('in-date')?.value || '').trim();
+                const qtyVal = document.getElementById('in-qty')?.value;
+                const qty = parseInt(qtyVal);
+                const ket = (document.getElementById('in-ket')?.value || '').trim();
+
+                const masterValid = (window.db.master || []).some(m => String(m.plu) === String(plu));
+                const isValid = Boolean(plu && masterValid && date && Number.isFinite(qty) && qty >= 1 && ket);
+
+                const btn = document.getElementById('btn-save-in');
+                if (btn) {
+                    btn.disabled = !isValid;
+                }
+                return isValid;
+            }
+
+            if (type === 'out') {
+                const plu = (document.getElementById('out-plu')?.value || '').trim();
+                const bagian = (document.getElementById('out-bagian')?.value || '').trim();
+                const date = (document.getElementById('out-date')?.value || '').trim();
+                const qtyVal = document.getElementById('out-qty')?.value;
+                const qty = parseInt(qtyVal);
+                const ket = (document.getElementById('out-ket')?.value || '').trim();
+
+                const masterValid = (window.db.master || []).some(m => String(m.plu) === String(plu));
+                const bagianValid = (window.db.bagian || []).some(b => String(b.nama) === String(bagian));
+                const isValid = Boolean(plu && masterValid && bagian && bagianValid && date && Number.isFinite(qty) && qty >= 1 && ket);
+
+                const btn = document.getElementById('btn-save-out');
+                if (btn) {
+                    btn.disabled = !isValid;
+                }
+                return isValid;
+            }
+        }
+
+        function setupFormValidation() {
+            ['in', 'out'].forEach(type => {
+                const form = document.getElementById(`form-${type}`);
+                if (form) {
+                    form.addEventListener('input', () => updateSaveButtonState(type));
+                    form.addEventListener('change', () => updateSaveButtonState(type));
+                }
+            });
+        }
+
+        function populateDropdowns() {
+            const inSelect = document.getElementById('in-plu');
+            if (inSelect && inSelect.tagName === 'SELECT') {
+                const currentVal = inSelect.value;
+                inSelect.innerHTML = '<option value="">-- Pilih Barang --</option>';
+                window.db.master.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.plu;
+                    opt.textContent = `${item.plu} - ${item.desc}`;
+                    inSelect.appendChild(opt);
+                });
+                inSelect.value = currentVal;
+            }
+
+            syncOutBarangOnMasterChange();
 
             const outBagianSelect = document.getElementById('out-bagian');
             if (outBagianSelect) {
@@ -1360,6 +1666,9 @@
                 });
                 outBagianSelect.value = currentBagianVal;
             }
+
+            updateSaveButtonState('in');
+            updateSaveButtonState('out');
         }
 
         function populateDropdownsSO() {
@@ -1379,46 +1688,138 @@
 
         window.saveTransaction = function(e, type) {
             e.preventDefault();
-            const plu = document.getElementById(`${type}-plu`).value;
-            const dateTimeRaw = document.getElementById(`${type}-date`).value;
-            const qty = parseInt(document.getElementById(`${type}-qty`).value);
-            const keterangan = document.getElementById(`${type}-ket`).value.trim() || '-';
-            
-            if (!plu || !Number.isFinite(qty) || qty < 1) {
-                window.showAlert('Pilih barang dan isi Qty minimal 1.', 'error');
+
+            if (type === 'in') {
+                const plu = (document.getElementById('in-plu')?.value || '').trim();
+                const dateTimeRaw = (document.getElementById('in-date')?.value || '').trim();
+                const qtyVal = document.getElementById('in-qty')?.value;
+                const qty = parseInt(qtyVal);
+                const keterangan = (document.getElementById('in-ket')?.value || '').trim();
+
+                if (!plu) {
+                    window.showAlert('Pilih barang terlebih dahulu!', 'error');
+                    updateSaveButtonState('in');
+                    return;
+                }
+                const masterItem = window.db.master.find(m => String(m.plu) === String(plu));
+                if (!masterItem) {
+                    window.showAlert('Barang yang dipilih tidak ditemukan di Master Barang!', 'error');
+                    updateSaveButtonState('in');
+                    return;
+                }
+                if (!dateTimeRaw) {
+                    window.showAlert('Tanggal & Waktu transaksi IN wajib diisi!', 'error');
+                    updateSaveButtonState('in');
+                    return;
+                }
+                if (!Number.isFinite(qty) || qty < 1) {
+                    window.showAlert('Qty (Jumlah) transaksi IN harus diisi minimal 1!', 'error');
+                    updateSaveButtonState('in');
+                    return;
+                }
+                if (!keterangan) {
+                    window.showAlert('Keterangan transaksi IN wajib diisi (tidak boleh kosong)!', 'error');
+                    updateSaveButtonState('in');
+                    return;
+                }
+
+                const dateObj = new Date(dateTimeRaw);
+                const formattedDateTime = isNaN(dateObj) ? dateTimeRaw : dateObj.toLocaleString('id-ID', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                });
+
+                const id = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 7);
+                const transaction = {
+                    id,
+                    plu,
+                    bagian: '-',
+                    dateTimeRaw,
+                    dateTime: formattedDateTime,
+                    qty,
+                    keterangan
+                };
+
+                window.db.in.push(transaction);
+                window.saveCloudData('in', id, transaction);
+                document.getElementById('form-in').reset();
+                setDefaultDateTime('in');
+                populateDropdowns();
+                renderTransactions('in');
+                updateSaveButtonState('in');
+                window.showAlert('Transaksi IN berhasil disimpan.');
                 return;
             }
 
-            let bagian = '-';
             if (type === 'out') {
-                bagian = document.getElementById('out-bagian').value;
+                const plu = (document.getElementById('out-plu')?.value || '').trim();
+                const bagian = (document.getElementById('out-bagian')?.value || '').trim();
+                const dateTimeRaw = (document.getElementById('out-date')?.value || '').trim();
+                const qtyVal = document.getElementById('out-qty')?.value;
+                const qty = parseInt(qtyVal);
+                const keterangan = (document.getElementById('out-ket')?.value || '').trim();
+
+                if (!plu) {
+                    window.showAlert('Barang wajib diisi! Ketik nama barang atau pilih dari master.', 'error');
+                    updateSaveButtonState('out');
+                    return;
+                }
+                const masterItem = window.db.master.find(m => String(m.plu) === String(plu));
+                if (!masterItem) {
+                    window.showAlert('Barang tidak ditemukan di Master Barang! Pastikan nama barang ada di master.', 'error');
+                    updateSaveButtonState('out');
+                    return;
+                }
+                if (!bagian) {
+                    window.showAlert('Bagian tujuan pengeluaran barang wajib dipilih!', 'error');
+                    updateSaveButtonState('out');
+                    return;
+                }
+                if (!dateTimeRaw) {
+                    window.showAlert('Tanggal & Waktu transaksi OUT wajib diisi!', 'error');
+                    updateSaveButtonState('out');
+                    return;
+                }
+                if (!Number.isFinite(qty) || qty < 1) {
+                    window.showAlert('Qty (Jumlah) transaksi OUT harus diisi minimal 1!', 'error');
+                    updateSaveButtonState('out');
+                    return;
+                }
+                if (!keterangan) {
+                    window.showAlert('Keterangan transaksi OUT wajib diisi (tidak boleh kosong)!', 'error');
+                    updateSaveButtonState('out');
+                    return;
+                }
+
+                const dateObj = new Date(dateTimeRaw);
+                const formattedDateTime = isNaN(dateObj) ? dateTimeRaw : dateObj.toLocaleString('id-ID', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                });
+
+                const id = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 7);
+                const transaction = {
+                    id,
+                    plu,
+                    bagian,
+                    dateTimeRaw,
+                    dateTime: formattedDateTime,
+                    qty,
+                    keterangan
+                };
+
+                window.db.out.push(transaction);
+                window.saveCloudData('out', id, transaction);
+                document.getElementById('form-out').reset();
+                window.clearOutBarang();
+                setDefaultDateTime('out');
+                populateDropdowns();
+                renderTransactions('out');
+                updateSaveButtonState('out');
+                window.showAlert('Transaksi OUT berhasil disimpan.');
+                return;
             }
-
-            const dateObj = new Date(dateTimeRaw);
-            const formattedDateTime = isNaN(dateObj) ? dateTimeRaw : dateObj.toLocaleString('id-ID', {
-                dateStyle: 'medium',
-                timeStyle: 'short'
-            });
-
-            const id = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 7);
-            const transaction = {
-                id,
-                plu,
-                bagian,
-                dateTimeRaw,
-                dateTime: formattedDateTime,
-                qty,
-                keterangan
-            };
-
-            window.db[type].push(transaction);
-            window.saveCloudData(type, id, transaction);
-            document.getElementById(`form-${type}`).reset();
-            setDefaultDateTime(type);
-            populateDropdowns();
-            renderTransactions(type);
-            window.showAlert(`Transaksi ${type.toUpperCase()} berhasil disimpan.`);
-        }
+        };
 
         window.saveSO = function(e) {
             e.preventDefault();
@@ -2389,6 +2790,10 @@
                 loginContainer.classList.remove('hidden');
             }
             setLoginEnabled(false);
+            initOutBarangAutocomplete();
+            setupFormValidation();
+            updateSaveButtonState('in');
+            updateSaveButtonState('out');
             // Jika koneksi lambat/tidak ada internet, tetap izinkan login dengan data yang ada
             setTimeout(() => {
                 if (!usersLoaded) {
